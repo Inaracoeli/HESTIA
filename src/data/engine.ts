@@ -1,0 +1,82 @@
+// Moteur de priorité : décide quelles tâches proposer chaque semaine.
+//
+// 1. Urgence = temps écoulé depuis la dernière fois ÷ intervalle prévu
+//    (0 = vient d'être fait, 1 = c'est le moment, plus de 1 = en retard).
+// 2. Score = urgence × poids de l'importance.
+// 3. On remplit le temps disponible de la semaine par score décroissant.
+//    Les tâches essentielles (importance 1) arrivées à échéance passent toujours.
+
+import type { Task } from './types';
+
+const DAY = 24 * 60 * 60 * 1000;
+const WEIGHT: Record<Task['importance'], number> = { 1: 4, 2: 2.5, 3: 1.5, 4: 1 };
+
+export function daysBetween(fromISO: string, to: Date): number {
+  return Math.floor((to.getTime() - new Date(fromISO + 'T00:00:00').getTime()) / DAY);
+}
+
+export function urgency(task: Task, at: Date): number {
+  return daysBetween(task.lastDone, at) / task.intervalDays;
+}
+
+export function score(task: Task, at: Date): number {
+  return urgency(task, at) * WEIGHT[task.importance];
+}
+
+export function dueDate(task: Task): Date {
+  return new Date(new Date(task.lastDone + 'T00:00:00').getTime() + task.intervalDays * DAY);
+}
+
+export type WeekPlan = { start: Date; tasks: Task[]; minutes: number; capacity: number };
+
+/** Début de semaine (lundi) d'une date. */
+export function weekStart(d: Date): Date {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const shift = (x.getDay() + 6) % 7;
+  x.setDate(x.getDate() - shift);
+  return x;
+}
+
+/**
+ * Prépare les semaines à venir. Une tâche entre dans une semaine si elle sera
+ * « mûre » (urgence ≥ 0,85) à la fin de cette semaine.
+ */
+export function planWeeks(tasks: Task[], today: Date, capacities: number[]): WeekPlan[] {
+  const pool = tasks.filter((t) => t.active);
+  const placed = new Set<string>();
+  const start0 = weekStart(today);
+
+  return capacities.map((capacity, w) => {
+    const start = new Date(start0.getTime() + w * 7 * DAY);
+    const end = new Date(start.getTime() + 6 * DAY);
+    const ripe = pool
+      .filter((t) => !placed.has(t.id) && urgency(t, end) >= 0.85)
+      .sort((a, b) => score(b, end) - score(a, end));
+
+    const chosen: Task[] = [];
+    let minutes = 0;
+    for (const t of ripe) {
+      const mustDo = t.importance === 1 && urgency(t, end) >= 1;
+      if (mustDo || minutes + t.minutes <= capacity) {
+        chosen.push(t);
+        minutes += t.minutes;
+        placed.add(t.id);
+      }
+    }
+    return { start, tasks: chosen, minutes, capacity };
+  });
+}
+
+/** Tâche suivante à proposer quand on demande « une tâche de plus ». */
+export function nextExtraTask(tasks: Task[], exclude: Set<string>, today: Date): Task | undefined {
+  return tasks
+    .filter((t) => t.active && !exclude.has(t.id))
+    .sort((a, b) => score(b, today) - score(a, today))[0];
+}
+
+export function formatMinutes(min: number): string {
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m ? `${h} h ${String(m).padStart(2, '0')}` : `${h} h`;
+}
