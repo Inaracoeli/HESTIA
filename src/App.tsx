@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TabBar, type Tab } from './components/TabBar';
-import type { Task } from './data/types';
+import { CAPACITY_STEPS, weekStart } from './data/engine';
+import { toISODate, type Task } from './data/types';
 import {
   DEFAULT_SETTINGS,
   getSession,
+  loadFeedback,
+  loadMembers,
+  saveFeedback,
+  saveProfile,
+  type Feedback,
+  type Member,
   loadFoyer,
   loadSettings,
   loadTasks,
@@ -26,7 +33,9 @@ import { ChoosePassword, Loading, Login, NoAccess } from './screens/Auth';
 import { Foyer } from './screens/Foyer';
 import { Guides } from './screens/Guides';
 import { MesTaches } from './screens/MesTaches';
+import { Carnet } from './screens/Carnet';
 import { Echeancier } from './screens/Echeancier';
+import { Profil } from './screens/Profil';
 import { Planning } from './screens/Planning';
 import { TaskSheet } from './screens/TaskSheet';
 import { Today } from './screens/Today';
@@ -59,8 +68,21 @@ export function App() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [schedule, setSchedule] = useState(false);
   const [manage, setManage] = useState(false);
+  const [journal, setJournal] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileLater, setProfileLater] = useState(false);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [toast, setToast] = useState('');
   const [error, setError] = useState('');
   const today = useMemo(() => new Date(), []);
+  // Question de fin de semaine : du vendredi au dimanche pour la semaine en cours, le lundi pour la précédente.
+  const feedbackWeek = useMemo(() => {
+    const day = today.getDay();
+    if (day === 5 || day === 6 || day === 0) return toISODate(weekStart(today));
+    if (day === 1) return toISODate(weekStart(new Date(today.getTime() - 3 * 86400000)));
+    return null;
+  }, [today]);
   const dark = settings.theme === 'sombre' || (settings.theme === 'auto' && prefersDark());
 
   /* Session */
@@ -91,7 +113,10 @@ export function App() {
         if (cancelled) return;
         setSettings((prev) => ({ ...s, brand: prev.brand }));
         setFoyer(f);
-        if (f) await refresh(f);
+        if (f) {
+          await refresh(f);
+          loadMembers(f.id).then(setMembers).catch(() => setMembers([]));
+        }
       } catch (err) {
         if (!cancelled) setError((err as Error).message);
       }
@@ -100,6 +125,17 @@ export function App() {
       cancelled = true;
     };
   }, [session, refresh]);
+
+  useEffect(() => {
+    if (!session || !feedbackWeek) return;
+    loadFeedback(session.userId, feedbackWeek).then(setFeedback).catch(() => setFeedback(null));
+  }, [session, feedbackWeek]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(''), 4000);
+    return () => clearTimeout(id);
+  }, [toast]);
 
   /* Thème et animations */
   useEffect(() => {
@@ -115,7 +151,7 @@ export function App() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [tab, openId, schedule, manage]);
+  }, [tab, openId, schedule, manage, journal, profileOpen]);
 
   const changeSettings = (s: UserSettings) => {
     setSettings(s);
@@ -140,6 +176,28 @@ export function App() {
 
   const open = openId ? tasks.find((t) => t.id === openId) ?? null : null;
 
+  const answerFeedback = async (avis: Feedback) => {
+    if (!feedbackWeek) return;
+    setFeedback(avis);
+    try {
+      await saveFeedback(foyer.id, session.userId, feedbackWeek, avis);
+      const i = Math.max(0, CAPACITY_STEPS.indexOf(settings.capacity));
+      const next = avis === 'trop' ? CAPACITY_STEPS[Math.max(0, i - 1)] : avis === 'pas_assez' ? CAPACITY_STEPS[Math.min(CAPACITY_STEPS.length - 1, i + 1)] : settings.capacity;
+      if (next !== settings.capacity) changeSettings({ ...settings, capacity: next });
+      const fmt = (m: number) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ' ' + (m % 60) : ''}`);
+      setToast(
+        avis === 'bien' ? 'Parfait, on garde ce rythme.'
+          : next === settings.capacity ? 'Noté. Vous êtes déjà au palier ' + (avis === 'trop' ? 'le plus bas.' : 'le plus haut.')
+          : `Noté : ${fmt(next)} par semaine désormais. Modifiable dans Foyer.`,
+      );
+    } catch (err) {
+      setFeedback(null);
+      setError((err as Error).message);
+    }
+  };
+
+  const showProfile = profileOpen || (foyer.profile === null && !profileLater);
+
   const toggleFollow = (task: Task) => {
     const value = !task.inSchedule;
     setTasks((all) => all.map((t) => (t.id === task.id ? { ...t, inSchedule: value } : t)));
@@ -162,7 +220,32 @@ export function App() {
           {error}
         </div>
       )}
-      {open ? (
+      {toast && (
+        <div className="notice notice--ok" role="status" style={{ position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom) + 100px)', left: 16, right: 16, zIndex: 50, boxShadow: 'var(--shadow)', maxWidth: 520, margin: '0 auto' }} onClick={() => setToast('')}>
+          {toast}
+        </div>
+      )}
+      {showProfile ? (
+        <Profil
+          initial={foyer.profile}
+          tasks={tasks}
+          firstTime={foyer.profile === null && !profileOpen}
+          onCancel={() => {
+            setProfileOpen(false);
+            setProfileLater(true);
+          }}
+          onSave={async (p) => {
+            const changes = await saveProfile(foyer.id, tasks, foyer.profile, p, today);
+            // L'écran reste ouvert pour afficher le résultat.
+            setProfileOpen(true);
+            setFoyer({ ...foyer, profile: p });
+            await refresh({ ...foyer, profile: p });
+            return changes;
+          }}
+        />
+      ) : journal ? (
+        <Carnet foyerId={foyer.id} members={members} onBack={() => setJournal(false)} onChanged={() => refresh(foyer)} />
+      ) : open ? (
         <TaskSheet
           key={open.id}
           task={open}
@@ -176,9 +259,9 @@ export function App() {
             saveChoices(open.id, choices).catch((err) => setError((err as Error).message));
           }}
           onBack={() => setOpenId(null)}
-          onDone={async () => {
+          onDone={async (cost, note) => {
             try {
-              await markDone(foyer.id, session.userId, open.id, today);
+              await markDone(foyer.id, session.userId, open.id, today, cost, note);
               await refresh(foyer);
               setOpenId(null);
             } catch (err) {
@@ -216,7 +299,17 @@ export function App() {
         <Echeancier tasks={tasks} today={today} onBack={() => setSchedule(false)} onOpen={(t) => setOpenId(t.id)} onToggleFollow={toggleFollow} />
       ) : (
         <>
-          {tab === 'home' && <Today tasks={tasks} today={today} capacity={settings.capacity} onOpen={(t) => setOpenId(t.id)} />}
+          {tab === 'home' && (
+            <Today
+              tasks={tasks}
+              today={today}
+              capacity={settings.capacity}
+              onOpen={(t) => setOpenId(t.id)}
+              feedbackWeek={feedbackWeek}
+              feedbackGiven={feedback !== null}
+              onFeedback={answerFeedback}
+            />
+          )}
           {tab === 'planning' && (
             <Planning
               tasks={tasks}
@@ -235,7 +328,7 @@ export function App() {
             />
           )}
           {tab === 'guides' && <Guides tasks={tasks} onOpen={(t) => setOpenId(t.id)} />}
-          {tab === 'foyer' && <Foyer foyer={foyer} email={session.email} settings={settings} dark={dark} onChange={changeSettings} taskCount={tasks.filter((t) => t.active).length} onOpenTasks={() => setManage(true)} />}
+          {tab === 'foyer' && <Foyer foyer={foyer} email={session.email} settings={settings} dark={dark} onChange={changeSettings} taskCount={tasks.filter((t) => t.active).length} onOpenTasks={() => setManage(true)} onOpenProfile={() => setProfileOpen(true)} onOpenJournal={() => setJournal(true)} />}
           <TabBar current={tab} onChange={setTab} />
         </>
       )}

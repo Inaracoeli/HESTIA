@@ -25,7 +25,7 @@ type Props = {
   onSaveChoices: (choices: Record<string, string>) => void;
   onToggleFollow: () => void;
   onBack: () => void;
-  onDone: () => Promise<void> | void;
+  onDone: (cost: number | null, note: string) => Promise<void> | void;
 };
 
 export function TaskSheet({ task, level, today, missing, onToggleMissing, onSaveChoices, onToggleFollow, onBack, onDone }: Props) {
@@ -48,10 +48,13 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
     onSaveChoices(next);
   };
 
+  const [closing, setClosing] = useState(false);
+  const [cost, setCost] = useState(task.budget > 0 ? String(task.budget) : '');
+  const [note, setNote] = useState('');
   const finish = async () => {
     setSaving(true);
     try {
-      await onDone();
+      await onDone(cost.trim() === '' ? null : Math.max(0, Number(cost.replace(',', '.')) || 0), note);
     } finally {
       setSaving(false);
     }
@@ -209,13 +212,33 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
 
           <div style={{ display: 'flex', gap: 10, padding: '4px 0 12px 0' }}>
             <button className="btn-secondary" onClick={onBack}>Plus tard</button>
-            <button className="btn-primary" style={{ flexGrow: 1, background: color }} onClick={finish} disabled={saving}>
-              {saving ? 'Enregistrement…' : "C'est fait"}
+            <button className="btn-primary" style={{ flexGrow: 1, background: color }} onClick={() => setClosing(true)} disabled={saving}>
+              C'est fait
             </button>
           </div>
           <p className="meta" style={{ textAlign: 'center', margin: 0 }}>Astuce : glissez vers la droite pour fermer.</p>
         </div>
       </div>
+      {closing && (
+        <div className="sheet-backdrop" onClick={() => !saving && setClosing(false)}>
+          <div className="sheet" role="dialog" aria-label="Noter dans le carnet" onClick={(e) => e.stopPropagation()}>
+            <span className="sheet__grip" aria-hidden="true" />
+            <h2 className="title-2">Bravo ! On le note au carnet ?</h2>
+            <label className="field">
+              <span className="field__label">Coût réel en € (facultatif)</span>
+              <input className="input" inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0" />
+            </label>
+            <label className="field">
+              <span className="field__label">Note (facultatif)</span>
+              <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex. : filtre à remplacer bientôt" />
+            </label>
+            <button className="btn-primary" style={{ background: color }} onClick={finish} disabled={saving}>
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+            <button className="btn-link" onClick={() => setClosing(false)} disabled={saving}>Annuler</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

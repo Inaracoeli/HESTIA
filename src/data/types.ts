@@ -33,8 +33,12 @@ export type Task = {
   choices: Record<string, string>;
   /** Créée par l'utilisateur (sinon issue du catalogue Hestia) */
   custom: boolean;
+  /** Identifiant du modèle du catalogue, s'il y en a un */
+  templateId: string | null;
   /** Affichée dans l'échéancier même si elle n'est pas prioritaire */
   inSchedule: boolean;
+  /** Mois où la tâche a du sens (1 à 12) ; vide = toute l'année */
+  months: number[];
   /** Jour choisi par l'utilisateur (AAAA-MM-JJ), facultatif */
   plannedDay?: string;
 };
@@ -50,6 +54,11 @@ export const DOMAIN_COLOR: Record<Domain, string> = {
   exterieur: 'var(--exterieur)',
   vehicule: 'var(--vehicule)',
 };
+
+/** La tâche a-t-elle du sens ce mois-ci ? */
+export function inSeason(t: Task, d: Date): boolean {
+  return t.months.length === 0 || t.months.includes(d.getMonth() + 1);
+}
 
 /** Suivie dans l'échéancier : d'office si elle est essentielle ou évite des dégâts coûteux, sinon si on l'a étoilée. */
 export function isFollowed(t: Task): boolean {

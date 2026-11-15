@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { IconChevronLeft, IconPlus, IconStar } from '../components/Icons';
 import { Topbar } from '../components/Pinned';
 import { useSwipeBack } from '../components/useSwipeBack';
-import { DOMAIN_COLOR, DOMAIN_LABEL, isFollowed, type Domain, type Task } from '../data/types';
+import { DOMAIN_COLOR, DOMAIN_LABEL, inSeason, isFollowed, type Domain, type Task } from '../data/types';
 
 const DAY = 24 * 60 * 60 * 1000;
 const MONTH_LETTER = new Intl.DateTimeFormat('fr-FR', { month: 'narrow' });
@@ -26,6 +26,13 @@ export function dueMonths(task: Task, today: Date): Set<number> {
   // En retard : la première échéance est ce mois-ci.
   if (next < start) next = new Date(start.getTime() + 12 * 60 * 60 * 1000);
   for (let guard = 0; next < end && guard < 400; guard++) {
+    if (!inSeason(task, next)) {
+      // Hors saison : on saute au début de la saison suivante.
+      let m = new Date(next.getFullYear(), next.getMonth() + 1, 1);
+      for (let i = 0; i < 12 && !inSeason(task, m); i++) m = new Date(m.getFullYear(), m.getMonth() + 1, 1);
+      next = m;
+      if (next >= end) break;
+    }
     months.add((next.getFullYear() - start.getFullYear()) * 12 + next.getMonth() - start.getMonth());
     next = new Date(next.getTime() + task.intervalDays * DAY);
   }

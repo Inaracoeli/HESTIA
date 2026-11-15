@@ -1,10 +1,11 @@
 // Accès aux données Hestia (Supabase). Tous les écrans passent par ce fichier.
 import { supabase } from './supabase';
 import type { Level, Task } from '../data/types';
+import { CATALOGUE_IDS, templatesFor, type Profile, type Template } from '../data/catalogue';
 import { periodLabelFor, toISODate } from '../data/types';
 
 export type Role = 'admin' | 'membre';
-export type Foyer = { id: string; nom: string; description: string | null; materielAbsent: string[]; role: Role };
+export type Foyer = { id: string; nom: string; description: string | null; materielAbsent: string[]; role: Role; profile: Profile | null };
 export type Member = { userId: string; email: string | null; role: Role };
 export type UserSettings = {
   capacity: number;
@@ -61,14 +62,21 @@ export async function signOut(): Promise<void> {
 export async function loadFoyer(userId: string): Promise<Foyer | null> {
   const { data, error } = await supabase
     .from('membres')
-    .select('role, foyers(id, nom, description, materiel_absent)')
+    .select('role, foyers(id, nom, description, materiel_absent, profil)')
     .eq('user_id', userId)
     .order('created_at')
     .limit(1);
   fail(error);
-  const row = data?.[0] as unknown as { role: Role; foyers: { id: string; nom: string; description: string | null; materiel_absent: string[] | null } } | undefined;
+  const row = data?.[0] as unknown as { role: Role; foyers: { id: string; nom: string; description: string | null; materiel_absent: string[] | null; profil: Profile | null } } | undefined;
   if (!row?.foyers) return null;
-  return { id: row.foyers.id, nom: row.foyers.nom, description: row.foyers.description, materielAbsent: row.foyers.materiel_absent ?? [], role: row.role };
+  return {
+    id: row.foyers.id,
+    nom: row.foyers.nom,
+    description: row.foyers.description,
+    materielAbsent: row.foyers.materiel_absent ?? [],
+    role: row.role,
+    profile: row.foyers.profil,
+  };
 }
 
 export async function saveMaterielAbsent(foyerId: string, list: string[]): Promise<void> {
@@ -142,6 +150,7 @@ type TaskRow = {
   choix: Record<string, string> | null;
   derniere_fois: string | null;
   dans_echeancier: boolean | null;
+  mois: number[] | null;
   planifications: { jour: string } | { jour: string }[] | null;
 };
 
@@ -168,7 +177,9 @@ function toTask(r: TaskRow, today: Date): Task {
     choices: r.choix ?? {},
     lastDone: r.derniere_fois ?? fallback,
     custom: !r.modele,
+    templateId: r.modele,
     inSchedule: !!r.dans_echeancier,
+    months: r.mois ?? [],
     plannedDay: plan?.jour,
   };
 }
@@ -183,8 +194,15 @@ export async function loadTasks(foyerId: string, today: Date): Promise<Task[]> {
   return ((data ?? []) as TaskRow[]).map((r) => toTask(r, today));
 }
 
-export async function markDone(foyerId: string, userId: string, taskId: string, day: Date): Promise<void> {
-  const { error } = await supabase.from('realisations').insert({ foyer_id: foyerId, user_id: userId, tache_id: taskId, fait_le: toISODate(day) });
+export async function markDone(foyerId: string, userId: string, taskId: string, day: Date, cost?: number | null, note?: string): Promise<void> {
+  const { error } = await supabase.from('realisations').insert({
+    foyer_id: foyerId,
+    user_id: userId,
+    tache_id: taskId,
+    fait_le: toISODate(day),
+    cout: cost ?? null,
+    note: note?.trim() || null,
+  });
   fail(error);
   // Une fois faite, la tâche n'a plus de jour prévu.
   await supabase.from('planifications').delete().eq('tache_id', taskId);
@@ -267,5 +285,120 @@ export async function setPlannedDay(foyerId: string, taskId: string, day: string
     return;
   }
   const { error } = await supabase.from('planifications').upsert({ tache_id: taskId, foyer_id: foyerId, jour: day });
+  fail(error);
+}
+
+/* ---------- Profil du foyer et catalogue ---------- */
+
+export type ProfileChanges = { added: Template[]; paused: Task[]; resumed: Task[] };
+
+/** Ce qui changera dans les tâches si l'on enregistre ce profil. */
+export function previewProfile(tasks: Task[], previous: Profile | null, next: Profile): ProfileChanges {
+  const wanted = new Set(templatesFor(next).map((t) => t.id));
+  const before = new Set(previous ? templatesFor(previous).map((t) => t.id) : []);
+  const existing = new Map(tasks.filter((t) => t.templateId).map((t) => [t.templateId as string, t]));
+  return {
+    added: templatesFor(next).filter((t) => !existing.has(t.id)),
+    paused: tasks.filter((t) => t.active && t.templateId && CATALOGUE_IDS.has(t.templateId) && !wanted.has(t.templateId)),
+    resumed: tasks.filter((t) => !t.active && t.templateId && wanted.has(t.templateId) && !before.has(t.templateId)),
+  };
+}
+
+/**
+ * Enregistre le profil et met les tâches en accord : ajoute les tâches utiles,
+ * met en pause celles qui ne servent plus (sans rien supprimer).
+ * Les nouvelles tâches sont étalées dans le temps pour ne pas tout proposer d'un coup.
+ */
+export async function saveProfile(foyerId: string, tasks: Task[], previous: Profile | null, next: Profile, today: Date): Promise<ProfileChanges> {
+  const changes = previewProfile(tasks, previous, next);
+  const { error } = await supabase.from('foyers').update({ profil: next }).eq('id', foyerId);
+  fail(error);
+  if (changes.added.length) {
+    const rows = changes.added.map((tpl, i) => {
+      const spread = 0.5 + 0.4 * ((i % 5) / 4); // déjà 50 à 90 % du cycle écoulé
+      const last = new Date(today.getTime() - Math.round(tpl.intervalDays * spread) * 86400000);
+      return {
+        foyer_id: foyerId,
+        modele: tpl.id,
+        titre: tpl.title,
+        domaine: tpl.domain,
+        importance: tpl.importance,
+        intervalle_jours: tpl.intervalDays,
+        periode_label: tpl.periodLabel,
+        minutes: tpl.minutes,
+        budget: tpl.budget,
+        difficulte: tpl.difficulty,
+        pro: tpl.pro,
+        outils: tpl.tools,
+        alternatives: tpl.alternatives,
+        questions: tpl.questions,
+        choix: tpl.choicesFrom?.(next) ?? {},
+        etapes: tpl.steps,
+        mois: tpl.months ?? null,
+        derniere_fois: toISODate(last),
+      };
+    });
+    const { error: e2 } = await supabase.from('taches').insert(rows);
+    fail(e2);
+  }
+  for (const t of changes.paused) await setActive(t.id, false);
+  for (const t of changes.resumed) await setActive(t.id, true);
+  return changes;
+}
+
+/* ---------- Carnet d'entretien ---------- */
+
+export type JournalEntry = {
+  id: string;
+  taskId: string;
+  title: string;
+  domain: Task['domain'];
+  date: string;
+  cost: number | null;
+  note: string | null;
+  userId: string | null;
+};
+
+export async function loadJournal(foyerId: string): Promise<JournalEntry[]> {
+  const { data, error } = await supabase
+    .from('realisations')
+    .select('id, tache_id, fait_le, cout, note, user_id, taches(titre, domaine)')
+    .eq('foyer_id', foyerId)
+    .order('fait_le', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(300);
+  fail(error);
+  return ((data ?? []) as unknown as {
+    id: string; tache_id: string; fait_le: string; cout: number | string | null; note: string | null; user_id: string | null;
+    taches: { titre: string; domaine: Task['domain'] } | null;
+  }[]).map((r) => ({
+    id: r.id,
+    taskId: r.tache_id,
+    title: r.taches?.titre ?? 'Tâche supprimée',
+    domain: r.taches?.domaine ?? 'maison',
+    date: r.fait_le,
+    cost: r.cout === null ? null : Number(r.cout),
+    note: r.note,
+    userId: r.user_id,
+  }));
+}
+
+export async function deleteJournalEntry(id: string): Promise<void> {
+  const { error } = await supabase.from('realisations').delete().eq('id', id);
+  fail(error);
+}
+
+/* ---------- Retour de fin de semaine ---------- */
+
+export type Feedback = 'trop' | 'bien' | 'pas_assez';
+
+export async function loadFeedback(userId: string, week: string): Promise<Feedback | null> {
+  const { data, error } = await supabase.from('retours').select('avis').eq('user_id', userId).eq('semaine', week).maybeSingle();
+  fail(error);
+  return (data?.avis as Feedback | undefined) ?? null;
+}
+
+export async function saveFeedback(foyerId: string, userId: string, week: string, avis: Feedback): Promise<void> {
+  const { error } = await supabase.from('retours').upsert({ foyer_id: foyerId, user_id: userId, semaine: week, avis });
   fail(error);
 }

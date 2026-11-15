@@ -1,11 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { IconChevronRight, IconHouse, IconMinus, IconPlus } from '../components/Icons';
 import { Topbar } from '../components/Pinned';
-import { formatMinutes } from '../data/engine';
+import { CAPACITY_STEPS, formatMinutes } from '../data/engine';
 import type { Level } from '../data/types';
 import { inviteMember, loadMembers, signOut, type Foyer as FoyerT, type Member, type UserSettings } from '../lib/api';
 
-const STEPS_MIN = [30, 60, 90, 120, 180, 240];
+const STEPS_MIN = CAPACITY_STEPS;
 const LEVELS: { id: Level; name: string; note: string }[] = [
   { id: 'debutant', name: 'Débutant', note: 'Chaque geste est détaillé.' },
   { id: 'intermediaire', name: 'Intermédiaire', note: 'Les étapes clés, sans le superflu.' },
@@ -31,9 +31,11 @@ type Props = {
   onChange: (s: UserSettings) => void;
   taskCount: number;
   onOpenTasks: () => void;
+  onOpenProfile: () => void;
+  onOpenJournal: () => void;
 };
 
-export function Foyer({ foyer, email, settings, dark, onChange, taskCount, onOpenTasks }: Props) {
+export function Foyer({ foyer, email, settings, dark, onChange, taskCount, onOpenTasks, onOpenProfile, onOpenJournal }: Props) {
   const idx = Math.max(0, STEPS_MIN.indexOf(settings.capacity));
   const set = (patch: Partial<UserSettings>) => onChange({ ...settings, ...patch });
   const level = LEVELS.find((l) => l.id === settings.level) ?? LEVELS[1];
@@ -82,13 +84,21 @@ export function Foyer({ foyer, email, settings, dark, onChange, taskCount, onOpe
       </header>
 
       <div className="content">
-        <button className="card card--raised" onClick={onOpenTasks} style={{ minHeight: 64, padding: '0 16px', display: 'flex', alignItems: 'center', gap: 12, color: 'var(--ink)', textAlign: 'left' }}>
-          <span style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 16, fontWeight: 700 }}>Mes tâches</span>
-            <span className="meta num">{taskCount} actives · pause, réglages, ajout</span>
-          </span>
-          <IconChevronRight size={18} />
-        </button>
+        <div className="card card--raised card--list" style={{ padding: '0 16px' }}>
+          {([
+            ['Mes tâches', `${taskCount} actives · pause, réglages, ajout`, onOpenTasks],
+            ['Composition du foyer', foyer.profile ? 'Chauffage, équipements, extérieurs, véhicules' : 'À compléter pour un catalogue adapté', onOpenProfile],
+            ['Carnet d’entretien', 'Historique et coûts réels', onOpenJournal],
+          ] as const).map(([label, hint, action]) => (
+            <button key={label} onClick={action} style={{ minHeight: 64, width: '100%', border: 0, background: 'none', padding: 0, display: 'flex', alignItems: 'center', gap: 12, color: 'var(--ink)', textAlign: 'left' }}>
+              <span style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 16, fontWeight: 700 }}>{label}</span>
+                <span className="meta num">{hint}</span>
+              </span>
+              <IconChevronRight size={18} />
+            </button>
+          ))}
+        </div>
 
         <section className="card" style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <h2 className="title-2" style={{ fontSize: 17 }}>Mon temps d'entretien par semaine</h2>

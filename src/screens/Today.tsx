@@ -10,9 +10,18 @@ const DATE_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'nume
 const SHORT_FMT = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
 const WEEKDAY_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' });
 
-type Props = { tasks: Task[]; today: Date; capacity: number; onOpen: (t: Task) => void };
+type Props = {
+  tasks: Task[];
+  today: Date;
+  capacity: number;
+  onOpen: (t: Task) => void;
+  /** Semaine concernée par la question de fin de semaine, ou null si ce n'est pas le moment */
+  feedbackWeek: string | null;
+  feedbackGiven: boolean;
+  onFeedback: (avis: 'trop' | 'bien' | 'pas_assez') => void;
+};
 
-export function Today({ tasks, today, capacity, onOpen }: Props) {
+export function Today({ tasks, today, capacity, onOpen, feedbackWeek, feedbackGiven, onFeedback }: Props) {
   const monday = toISODate(weekStart(today));
   const todayISO = toISODate(today);
   // Faites cette semaine : elles restent affichées, cochées.
@@ -83,6 +92,20 @@ export function Today({ tasks, today, capacity, onOpen }: Props) {
             );
           })}
         </div>
+
+        {feedbackWeek && !feedbackGiven && (
+          <section className="card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, borderColor: 'var(--gold-2)' }}>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>{today.getDay() === 1 ? 'La semaine dernière' : 'Cette semaine'}, c'était…</span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+              {([['trop', 'Trop'], ['bien', 'Bien'], ['pas_assez', 'Pas assez']] as const).map(([v, label]) => (
+                <button key={v} onClick={() => onFeedback(v)} style={{ height: 44, border: '1px solid var(--line)', borderRadius: 12, background: 'var(--bg)', color: 'var(--ink)', fontSize: 14, fontWeight: 700 }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span className="meta" style={{ fontSize: 12 }}>Hestia ajuste votre temps d'entretien en conséquence.</span>
+          </section>
+        )}
 
         <button className="btn-outline" onClick={addOne}>
           <IconPlus size={18} />

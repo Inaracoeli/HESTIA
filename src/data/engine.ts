@@ -6,7 +6,7 @@
 // 3. On remplit le temps disponible de la semaine par score décroissant.
 //    Les tâches essentielles (importance 1) arrivées à échéance passent toujours.
 
-import type { Task } from './types';
+import { inSeason, type Task } from './types';
 
 const DAY = 24 * 60 * 60 * 1000;
 const WEIGHT: Record<Task['importance'], number> = { 1: 4, 2: 2.5, 3: 1.5, 4: 1 };
@@ -23,8 +23,15 @@ export function score(task: Task, at: Date): number {
   return urgency(task, at) * WEIGHT[task.importance];
 }
 
+/** Prochaine échéance, repoussée au début de la saison si elle tombe hors saison. */
 export function dueDate(task: Task): Date {
-  return new Date(new Date(task.lastDone + 'T00:00:00').getTime() + task.intervalDays * DAY);
+  const d = new Date(new Date(task.lastDone + 'T00:00:00').getTime() + task.intervalDays * DAY);
+  if (inSeason(task, d)) return d;
+  for (let i = 1; i <= 12; i++) {
+    const m = new Date(d.getFullYear(), d.getMonth() + i, 1);
+    if (inSeason(task, m)) return m;
+  }
+  return d;
 }
 
 export type WeekPlan = { start: Date; tasks: Task[]; minutes: number; capacity: number };
@@ -50,7 +57,7 @@ export function planWeeks(tasks: Task[], today: Date, capacities: number[]): Wee
     const start = new Date(start0.getTime() + w * 7 * DAY);
     const end = new Date(start.getTime() + 6 * DAY);
     const ripe = pool
-      .filter((t) => !placed.has(t.id) && urgency(t, end) >= 0.85)
+      .filter((t) => !placed.has(t.id) && (inSeason(t, start) || inSeason(t, end)) && urgency(t, end) >= 0.85)
       .sort((a, b) => score(b, end) - score(a, end));
 
     const chosen: Task[] = [];
@@ -70,9 +77,12 @@ export function planWeeks(tasks: Task[], today: Date, capacities: number[]): Wee
 /** Tâche suivante à proposer quand on demande « une tâche de plus ». */
 export function nextExtraTask(tasks: Task[], exclude: Set<string>, today: Date): Task | undefined {
   return tasks
-    .filter((t) => t.active && !exclude.has(t.id))
+    .filter((t) => t.active && !exclude.has(t.id) && inSeason(t, today))
     .sort((a, b) => score(b, today) - score(a, today))[0];
 }
+
+/** Paliers de temps disponible par semaine (minutes). */
+export const CAPACITY_STEPS = [30, 60, 90, 120, 180, 240];
 
 export function formatMinutes(min: number): string {
   if (min < 60) return `${min} min`;
