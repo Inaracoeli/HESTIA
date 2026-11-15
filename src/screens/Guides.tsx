@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react';
 import { IconBook, IconCar, IconChevronRight, IconHouse, IconLeaf, IconSearch } from '../components/Icons';
+import { Pinned } from '../components/Pinned';
 import { DOMAIN_COLOR, DOMAIN_LABEL, type Domain, type Task } from '../data/types';
 
 const TINT: Record<Domain, [string, string]> = {
   maison: ['#F6E3D6', '#9A3608'],
-  exterieur: ['#E0EADF', '#36543A'],
-  vehicule: ['#E1E7EC', '#3E4E5E'],
+  exterieur: ['#E1EFD6', '#2C5A1B'],
+  vehicule: ['#DFE6EF', '#2F4259'],
 };
 const ICON: Record<Domain, ReactNode> = {
   maison: <IconHouse size={26} />,
@@ -23,6 +24,7 @@ export function Guides({ tasks, onOpen }: Props) {
 
   return (
     <div className="screen">
+      <Pinned title="Guides" offset={70} />
       <header className="header" style={{ paddingBottom: 62 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className="title-icon" aria-hidden="true">
@@ -42,7 +44,7 @@ export function Guides({ tasks, onOpen }: Props) {
             placeholder="Chercher un guide, un geste, un produit"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            style={{ flexGrow: 1, minWidth: 0, border: 0, outline: 0, background: 'transparent', fontFamily: 'inherit', fontSize: 15, color: 'var(--ink)' }}
+            style={{ flexGrow: 1, minWidth: 0, border: 0, outline: 0, background: 'transparent', fontFamily: 'inherit', fontSize: 16, color: 'var(--ink)' }}
           />
         </label>
 
@@ -69,7 +71,7 @@ export function Guides({ tasks, onOpen }: Props) {
         </div>
 
         <div className="card card--list" style={{ padding: '2px 14px' }}>
-          {list.length === 0 && <p className="meta" style={{ padding: '16px 0' }}>Aucun guide ne correspond.</p>}
+          {list.length === 0 && <p className="meta" style={{ padding: '16px 0', margin: 0 }}>Aucun guide ne correspond.</p>}
           {list.map((t) => (
             <button key={t.id} className="task-row" style={{ minHeight: 78 }} onClick={() => onOpen(t)}>
               <span style={{ flexShrink: 0, width: 52, height: 52, borderRadius: 16, background: TINT[t.domain][0], color: TINT[t.domain][1], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -77,7 +79,9 @@ export function Guides({ tasks, onOpen }: Props) {
               </span>
               <span className="task-row__text">
                 <span className="task-row__title" style={{ fontSize: 15 }}>{t.title}</span>
-                <span className="meta">{t.steps.intermediaire.length} étapes</span>
+                <span className="meta">
+                  {t.questions.length > 0 ? 'S’adapte à votre cas' : `${t.steps.intermediaire.length} étapes`}
+                </span>
               </span>
               <IconChevronRight size={16} />
             </button>

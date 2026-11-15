@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import { IconBook, IconCalendar, IconFlame, IconHouse } from './Icons';
 
-export type Tab = 'today' | 'planning' | 'guides' | 'foyer';
+export type Tab = 'home' | 'planning' | 'guides' | 'foyer';
 
 const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
-  { id: 'today', label: "Aujourd'hui", icon: <IconFlame /> },
+  { id: 'home', label: 'Accueil', icon: <IconFlame /> },
   { id: 'planning', label: 'Planning', icon: <IconCalendar /> },
   { id: 'guides', label: 'Guides', icon: <IconBook /> },
   { id: 'foyer', label: 'Foyer', icon: <IconHouse /> },

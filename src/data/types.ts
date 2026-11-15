@@ -5,6 +5,12 @@ export type Importance = 1 | 2 | 3 | 4;
 
 export type Level = 'debutant' | 'intermediaire' | 'expert';
 
+/** Une étape : texte simple, ou texte affiché seulement pour certaines réponses. */
+export type Step = string | { t: string; si: Record<string, string[]> };
+
+/** Question posée une fois pour adapter les étapes (type de haie, emplacement des filtres…). */
+export type Question = { id: string; label: string; options: { v: string; l: string }[] };
+
 export type Task = {
   id: string;
   title: string;
@@ -20,7 +26,13 @@ export type Task = {
   lastDone: string; // date ISO (AAAA-MM-JJ)
   active: boolean;
   tools: string[];
-  steps: Record<Level, string[]>;
+  /** Solution de remplacement pour chaque outil, si on ne l'a pas */
+  alternatives: Record<string, string>;
+  steps: Record<Level, Step[]>;
+  questions: Question[];
+  choices: Record<string, string>;
+  /** Jour choisi par l'utilisateur (AAAA-MM-JJ), facultatif */
+  plannedDay?: string;
 };
 
 export const DOMAIN_LABEL: Record<Domain, string> = {
@@ -34,3 +46,18 @@ export const DOMAIN_COLOR: Record<Domain, string> = {
   exterieur: 'var(--exterieur)',
   vehicule: 'var(--vehicule)',
 };
+
+/** Étapes à afficher pour un niveau et des réponses données. */
+export function resolveSteps(task: Task, level: Level, choices: Record<string, string>): string[] {
+  return task.steps[level]
+    .filter((s) => {
+      if (typeof s === 'string') return true;
+      return Object.entries(s.si).every(([q, values]) => choices[q] !== undefined && values.includes(choices[q]));
+    })
+    .map((s) => (typeof s === 'string' ? s : s.t));
+}
+
+export function toISODate(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}

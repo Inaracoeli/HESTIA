@@ -1,28 +1,33 @@
 import { useState } from 'react';
 import { Wordmark } from '../components/Brand';
-import { IconChevronRight, IconPlus } from '../components/Icons';
+import { IconCheck, IconChevronRight, IconPlus } from '../components/Icons';
+import { Pinned } from '../components/Pinned';
 import { Ring } from '../components/Ring';
-import { formatMinutes, nextExtraTask, planWeeks, urgency, dueDate } from '../data/engine';
-import { DOMAIN_COLOR, DOMAIN_LABEL, type Task } from '../data/types';
+import { dueDate, formatMinutes, nextExtraTask, planWeeks, urgency, weekStart } from '../data/engine';
+import { DOMAIN_COLOR, DOMAIN_LABEL, toISODate, type Task } from '../data/types';
 
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
 const SHORT_FMT = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
+const WEEKDAY_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' });
 
-type Props = {
-  tasks: Task[];
-  today: Date;
-  capacity: number;
-  done: Set<string>;
-  onOpen: (t: Task) => void;
-};
+type Props = { tasks: Task[]; today: Date; capacity: number; onOpen: (t: Task) => void };
 
-export function Today({ tasks, today, capacity, done, onOpen }: Props) {
-  const [week] = planWeeks(tasks, today, [capacity]);
-  const [extra, setExtra] = useState<Task[]>([]);
-  const list = [...week.tasks, ...extra];
+export function Today({ tasks, today, capacity, onOpen }: Props) {
+  const monday = toISODate(weekStart(today));
+  const todayISO = toISODate(today);
+  // Faites cette semaine : elles restent affichées, cochées.
+  const doneThisWeek = tasks.filter((t) => t.active && t.lastDone >= monday && t.lastDone <= todayISO);
+  const doneIds = new Set(doneThisWeek.map((t) => t.id));
+  const [week] = planWeeks(tasks.filter((t) => !doneIds.has(t.id)), today, [capacity]);
+  const [extraIds, setExtraIds] = useState<string[]>([]);
+  const planned = new Set(week.tasks.map((t) => t.id));
+  const extra = extraIds
+    .map((id) => tasks.find((t) => t.id === id))
+    .filter((t): t is Task => !!t && !doneIds.has(t.id) && !planned.has(t.id));
+  const todo = [...week.tasks, ...extra];
+  const list = [...todo, ...doneThisWeek];
   const listed = new Set(list.map((t) => t.id));
   const minutes = list.reduce((s, t) => s + t.minutes, 0);
-  const doneCount = list.filter((t) => done.has(t.id)).length;
 
   const upcoming = tasks
     .filter((t) => t.active && !listed.has(t.id))
@@ -31,46 +36,53 @@ export function Today({ tasks, today, capacity, done, onOpen }: Props) {
 
   const addOne = () => {
     const next = nextExtraTask(tasks, listed, today);
-    if (next) setExtra((e) => [...e, next]);
+    if (next) setExtraIds((e) => [...e, next.id]);
   };
 
   return (
     <div className="screen">
+      <Pinned title={<Wordmark size={18} />} offset={90} />
       <header className="header">
         <div className="header__row" style={{ alignItems: 'flex-end' }}>
           <Wordmark size={30} />
-          <span className="num" style={{ fontSize: 13, fontWeight: 700, paddingBottom: 4 }}>
-            {DATE_FMT.format(today)}
-          </span>
+          <span className="num" style={{ fontSize: 13, fontWeight: 700, paddingBottom: 4 }}>{DATE_FMT.format(today)}</span>
         </div>
         <div className="separator" aria-hidden="true" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <h1 className="title-1 title-home">
-            {list.length} {list.length > 1 ? 'tâches' : 'tâche'} cette semaine
+            {todo.length === 0 ? 'Semaine bouclée' : `${todo.length} ${todo.length > 1 ? 'tâches' : 'tâche'} cette semaine`}
           </h1>
           <span className="header__sub num" style={{ fontWeight: 500 }}>
-            Environ {formatMinutes(minutes)} · {doneCount} sur {list.length} {list.length > 1 ? 'faites' : 'faite'}
+            Environ {formatMinutes(minutes)} · {doneThisWeek.length} sur {list.length} {list.length > 1 ? 'faites' : 'faite'}
           </span>
         </div>
       </header>
 
       <div className="content">
         <div className="card card--raised card--list" style={{ padding: '0 16px' }}>
-          {list.length === 0 && <p className="meta" style={{ padding: '20px 0' }}>Rien à faire cette semaine. Profitez-en.</p>}
-          {list.map((t) => (
-            <button key={t.id} className="task-row" onClick={() => onOpen(t)} style={{ opacity: done.has(t.id) ? 0.5 : 1 }}>
-              <Ring progress={urgency(t, today)} color={DOMAIN_COLOR[t.domain]} />
-              <span className="task-row__text">
-                <span className="task-row__title" style={{ textDecoration: done.has(t.id) ? 'line-through' : 'none' }}>
-                  {t.title}
+          {list.length === 0 && <p className="meta" style={{ padding: '20px 0', margin: 0 }}>Rien à faire cette semaine. Profitez-en.</p>}
+          {list.map((t) => {
+            const done = doneIds.has(t.id);
+            return (
+              <button key={t.id} className="task-row" onClick={() => onOpen(t)} style={{ opacity: done ? 0.55 : 1 }}>
+                {done ? (
+                  <span style={{ width: 36, height: 36, borderRadius: '50%', background: DOMAIN_COLOR[t.domain], color: '#FFFDF7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <IconCheck size={18} />
+                  </span>
+                ) : (
+                  <Ring progress={urgency(t, today)} color={DOMAIN_COLOR[t.domain]} />
+                )}
+                <span className="task-row__text">
+                  <span className="task-row__title" style={{ textDecoration: done ? 'line-through' : 'none' }}>{t.title}</span>
+                  <span className="meta num">
+                    {DOMAIN_LABEL[t.domain]} · {formatMinutes(t.minutes)}
+                    {t.plannedDay && !done ? ` · prévu ${WEEKDAY_FMT.format(new Date(t.plannedDay + 'T12:00:00'))}` : ''}
+                  </span>
                 </span>
-                <span className="meta num">
-                  {DOMAIN_LABEL[t.domain]} · {formatMinutes(t.minutes)}
-                </span>
-              </span>
-              {t.importance === 1 ? <span className="chip">Essentiel</span> : <IconChevronRight size={18} />}
-            </button>
-          ))}
+                {t.importance === 1 && !done ? <span className="chip">Essentiel</span> : <IconChevronRight size={18} />}
+              </button>
+            );
+          })}
         </div>
 
         <button className="btn-outline" onClick={addOne}>

@@ -1,7 +1,7 @@
 {
-  "name": "Hestia",
+  "name": "Hestia Home",
   "short_name": "Hestia",
-  "description": "Planifier et suivre l'entretien de la maison, des extérieurs et des véhicules.",
+  "description": "Bien gérer son foyer : l'entretien de la maison, des extérieurs et des véhicules.",
   "lang": "fr",
   "start_url": "/",
   "scope": "/",

@@ -34,34 +34,16 @@ export function LogoTile({ size = 40 }: { size?: number }) {
   );
 }
 
-export function Wordmark({ size = 30, color = 'var(--on-gold)' }: { size?: number; color?: string }) {
+export function Wordmark({ size = 30, variant = 'braise' }: { size?: number; variant?: 'braise' | 'ivoire' }) {
   return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <span style={{ display: 'flex', alignItems: 'center', gap: Math.round(size * 0.4) }}>
       <LogoTile size={Math.round(size * 1.35)} />
-      <span
-        role="img"
-        aria-label="Hestia"
-        style={{
-          fontFamily: 'var(--font-name)',
-          fontSize: size,
-          fontWeight: 800,
-          letterSpacing: '-0.035em',
-          lineHeight: 1,
-          color,
-          whiteSpace: 'nowrap',
-        }}
-      >
+      <span role="img" aria-label="Hestia" className={`wordmark${variant === 'ivoire' ? ' wordmark--ivoire' : ''}`} style={{ fontSize: size }}>
         <span aria-hidden="true">HEST</span>
-        <span
-          aria-hidden="true"
-          style={{ position: 'relative', display: 'inline-block', fontFamily: 'var(--font-title)', fontWeight: 900, margin: '0 0.04em' }}
-        >
+        <span aria-hidden="true" className="wordmark__i">
           ı
-          <svg
-            viewBox="0 0 64 64"
-            style={{ position: 'absolute', left: '50%', top: '-0.1em', width: '0.38em', height: '0.38em', transform: 'translateX(-50%)', overflow: 'visible' }}
-          >
-            <path className="flicker" fill="#C2470F" d={FLAME_PATH} />
+          <svg viewBox="0 0 64 64" className="wordmark__flame">
+            <path className="flicker" fill={variant === 'ivoire' ? '#C2470F' : '#FFF3D6'} stroke={variant === 'ivoire' ? 'none' : '#8E2A05'} strokeWidth={3} d={FLAME_PATH} />
           </svg>
         </span>
         <span aria-hidden="true">A</span>
@@ -69,3 +51,5 @@ export function Wordmark({ size = 30, color = 'var(--on-gold)' }: { size?: numbe
     </span>
   );
 }
+
+export const SLOGAN = 'Bien gérer son foyer';

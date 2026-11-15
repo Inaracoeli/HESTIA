@@ -1,13 +1,9 @@
+import { useEffect, useState, type FormEvent } from 'react';
 import { IconHouse, IconMinus, IconPlus } from '../components/Icons';
+import { Pinned } from '../components/Pinned';
 import { formatMinutes } from '../data/engine';
 import type { Level } from '../data/types';
-
-export type Settings = {
-  capacity: number; // minutes par semaine
-  level: Level;
-  dark: boolean;
-  motion: boolean;
-};
+import { inviteMember, loadMembers, signOut, type Foyer as FoyerT, type Member, type UserSettings } from '../lib/api';
 
 const STEPS_MIN = [30, 60, 90, 120, 180, 240];
 const LEVELS: { id: Level; name: string; note: string }[] = [
@@ -27,13 +23,51 @@ function Switch({ label, on, onChange }: { label: string; on: boolean; onChange:
   );
 }
 
-export function Foyer({ settings, onChange }: { settings: Settings; onChange: (s: Settings) => void }) {
+type Props = {
+  foyer: FoyerT;
+  email: string | null;
+  settings: UserSettings;
+  dark: boolean;
+  onChange: (s: UserSettings) => void;
+};
+
+export function Foyer({ foyer, email, settings, dark, onChange }: Props) {
   const idx = Math.max(0, STEPS_MIN.indexOf(settings.capacity));
-  const set = (patch: Partial<Settings>) => onChange({ ...settings, ...patch });
+  const set = (patch: Partial<UserSettings>) => onChange({ ...settings, ...patch });
   const level = LEVELS.find((l) => l.id === settings.level) ?? LEVELS[1];
+  const isAdmin = foyer.role === 'admin';
+
+  const [members, setMembers] = useState<Member[]>([]);
+  const [invite, setInvite] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    loadMembers(foyer.id).then(setMembers).catch(() => setMembers([]));
+  }, [foyer.id]);
+
+  const sendInvite = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setMessage(null);
+    try {
+      const statut = await inviteMember(foyer.id, invite);
+      setMessage({
+        ok: true,
+        text: statut === 'invite' ? `Invitation envoyée à ${invite}.` : `${invite} avait déjà un compte : il est ajouté au foyer et peut se connecter.`,
+      });
+      setInvite('');
+      setMembers(await loadMembers(foyer.id));
+    } catch (err) {
+      setMessage({ ok: false, text: (err as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="screen">
+      <Pinned title="Foyer" offset={70} />
       <header className="header" style={{ paddingBottom: 62 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className="title-icon" aria-hidden="true">
@@ -41,7 +75,7 @@ export function Foyer({ settings, onChange }: { settings: Settings; onChange: (s
           </span>
           <h1 className="title-1">Foyer</h1>
         </div>
-        <span className="header__sub">Maison avec jardin, 2 voitures</span>
+        <span className="header__sub">{foyer.nom}{foyer.description ? ` · ${foyer.description}` : ''}</span>
       </header>
 
       <div className="content">
@@ -64,9 +98,7 @@ export function Foyer({ settings, onChange }: { settings: Settings; onChange: (s
               <IconPlus size={20} />
             </button>
           </div>
-          <span className="meta" style={{ fontSize: 13, textAlign: 'center', lineHeight: 1.4 }}>
-            Les tâches essentielles passent toujours.
-          </span>
+          <span className="meta" style={{ fontSize: 13, textAlign: 'center', lineHeight: 1.4 }}>Les tâches essentielles passent toujours.</span>
         </section>
 
         <section className="card" style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -91,14 +123,38 @@ export function Foyer({ settings, onChange }: { settings: Settings; onChange: (s
         </section>
 
         <section className="card card--list">
-          <Switch label="Thème sombre" on={settings.dark} onChange={(v) => set({ dark: v })} />
+          <Switch label="Thème sombre" on={dark} onChange={(v) => set({ theme: v ? 'sombre' : 'clair' })} />
           <Switch label="Animations" on={settings.motion} onChange={(v) => set({ motion: v })} />
         </section>
 
-        <p className="meta" style={{ textAlign: 'center', lineHeight: 1.4 }}>
-          Version de démonstration : les tâches sont des exemples
-          <br />et rien n'est encore enregistré.
-        </p>
+        <section className="card" style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <h2 className="title-2" style={{ fontSize: 17 }}>Membres du foyer</h2>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {members.map((m) => (
+              <div key={m.userId} style={{ minHeight: 48, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ flexGrow: 1, fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.email ?? 'Membre'}</span>
+                <span className="chip">{m.role === 'admin' ? 'Administrateur' : 'Membre'}</span>
+              </div>
+            ))}
+          </div>
+          {isAdmin && (
+            <form onSubmit={sendInvite} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <label className="field">
+                <span className="field__label">Inviter par e-mail</span>
+                <input className="input" type="email" required placeholder="prenom@exemple.fr" value={invite} onChange={(e) => setInvite(e.target.value)} />
+              </label>
+              <button className="btn-gold" type="submit" disabled={busy}>{busy ? 'Envoi…' : 'Envoyer l’invitation'}</button>
+            </form>
+          )}
+          {message && <div className={`notice ${message.ok ? 'notice--ok' : 'notice--error'}`} role="status">{message.text}</div>}
+        </section>
+
+        <section className="card card--list">
+          <div style={{ minHeight: 56, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ flexGrow: 1, fontSize: 14, color: 'var(--ink-soft)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{email}</span>
+            <button className="btn-link" onClick={() => signOut()}>Se déconnecter</button>
+          </div>
+        </section>
       </div>
     </div>
   );

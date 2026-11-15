@@ -3,16 +3,19 @@
 Web app de planification et de suivi de l'entretien de la maison, des extérieurs et des véhicules.
 Pensée d'abord pour l'iPhone (à installer sur l'écran d'accueil), utilisable sur ordinateur.
 
+*Hestia Home · Bien gérer son foyer*
+
 ## État actuel
 
-Version de démonstration : les écrans Aujourd'hui, Planning, Guides, Foyer et la fiche tâche
-fonctionnent avec des tâches d'exemple. Rien n'est encore enregistré : les comptes et la base
-de données (Supabase) arrivent à l'étape suivante.
+- Connexion par e-mail et mot de passe, sur invitation de l'administrateur du foyer.
+- Écrans Accueil, Planning (choix du jour), Guides, Foyer et fiche tâche, branchés sur Supabase.
+- Guides adaptables : quelques questions sur votre cas, des étapes selon votre niveau,
+  et une solution de remplacement quand il vous manque du matériel.
 
 ## Technique
 
 - **Interface** : React + Vite, en TypeScript
-- **Données et comptes** : Supabase (à venir)
+- **Données et comptes** : Supabase, espace `hestia` dédié et cloisonné
 - **Hébergement** : Cloudflare, mise en ligne automatique à chaque envoi sur GitHub
 
 ## Organisation du code
@@ -22,7 +25,8 @@ de données (Supabase) arrivent à l'étape suivante.
 | `src/screens` | Un fichier par écran |
 | `src/components` | Logo, barre d'onglets, icônes, anneaux d'échéance |
 | `src/data/engine.ts` | Moteur de priorité : choisit les tâches de chaque semaine |
-| `src/data/demo.ts` | Tâches d'exemple |
+| `src/lib/api.ts` | Lecture et écriture des données (Supabase) |
+| `supabase/` | Évolutions de la base et fonction d'invitation |
 | `src/styles.css` | Couleurs, polices et styles (thèmes clair et sombre) |
 | `public` | Icônes de l'app et fichiers d'installation sur iPhone |
 
