@@ -31,6 +31,8 @@ export type Task = {
   steps: Record<Level, Step[]>;
   questions: Question[];
   choices: Record<string, string>;
+  /** Créée par l'utilisateur (sinon issue du catalogue Hestia) */
+  custom: boolean;
   /** Affichée dans l'échéancier même si elle n'est pas prioritaire */
   inSchedule: boolean;
   /** Jour choisi par l'utilisateur (AAAA-MM-JJ), facultatif */
@@ -62,6 +64,12 @@ export function resolveSteps(task: Task, level: Level, choices: Record<string, s
       return Object.entries(s.si).every(([q, values]) => choices[q] !== undefined && values.includes(choices[q]));
     })
     .map((s) => (typeof s === 'string' ? s : s.t));
+}
+
+/** Libellé du rythme à partir d'un nombre de jours. */
+export function periodLabelFor(days: number): string {
+  const known: Record<number, string> = { 7: 'Toutes les semaines', 14: 'Toutes les 2 semaines', 30: 'Tous les mois', 60: 'Tous les 2 mois', 90: 'Tous les 3 mois', 180: 'Tous les 6 mois', 365: 'Tous les ans', 730: 'Tous les 2 ans' };
+  return known[days] ?? `Tous les ${days} jours`;
 }
 
 export function toISODate(d: Date): string {

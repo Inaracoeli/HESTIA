@@ -1,7 +1,7 @@
 // Accès aux données Hestia (Supabase). Tous les écrans passent par ce fichier.
 import { supabase } from './supabase';
 import type { Level, Task } from '../data/types';
-import { toISODate } from '../data/types';
+import { periodLabelFor, toISODate } from '../data/types';
 
 export type Role = 'admin' | 'membre';
 export type Foyer = { id: string; nom: string; description: string | null; materielAbsent: string[]; role: Role };
@@ -124,6 +124,7 @@ export async function saveSettings(userId: string, s: UserSettings): Promise<voi
 
 type TaskRow = {
   id: string;
+  modele: string | null;
   titre: string;
   domaine: Task['domain'];
   importance: Task['importance'];
@@ -166,6 +167,7 @@ function toTask(r: TaskRow, today: Date): Task {
     questions: r.questions ?? [],
     choices: r.choix ?? {},
     lastDone: r.derniere_fois ?? fallback,
+    custom: !r.modele,
     inSchedule: !!r.dans_echeancier,
     plannedDay: plan?.jour,
   };
@@ -190,6 +192,66 @@ export async function markDone(foyerId: string, userId: string, taskId: string, 
 
 export async function saveChoices(taskId: string, choices: Record<string, string>): Promise<void> {
   const { error } = await supabase.from('taches').update({ choix: choices }).eq('id', taskId);
+  fail(error);
+}
+
+/** Champs modifiables d'une tâche. */
+export type TaskEdit = {
+  title: string;
+  domain: Task['domain'];
+  importance: Task['importance'];
+  intervalDays: number;
+  minutes: number;
+  budget: number;
+  difficulty: Task['difficulty'];
+  pro: boolean;
+  tools: string[];
+  /** Étapes simples (tâches créées par l'utilisateur) : les mêmes pour tous les niveaux */
+  steps?: string[];
+  /** Dernière réalisation (AAAA-MM-JJ) ; null = jamais ou inconnue, donc à faire dès maintenant */
+  lastDone?: string | null;
+};
+
+function editToRow(e: TaskEdit) {
+  const row: Record<string, unknown> = {
+    titre: e.title.trim(),
+    domaine: e.domain,
+    importance: e.importance,
+    intervalle_jours: e.intervalDays,
+    periode_label: periodLabelFor(e.intervalDays),
+    minutes: e.minutes,
+    budget: e.budget,
+    difficulte: e.difficulty,
+    pro: e.pro,
+    outils: e.tools,
+  };
+  if (e.steps) row.etapes = { debutant: e.steps, intermediaire: e.steps, expert: e.steps };
+  if (e.lastDone !== undefined) row.derniere_fois = e.lastDone;
+  return row;
+}
+
+export async function updateTask(taskId: string, e: TaskEdit): Promise<void> {
+  const { error } = await supabase.from('taches').update(editToRow(e)).eq('id', taskId);
+  fail(error);
+}
+
+export async function createTask(foyerId: string, e: TaskEdit): Promise<void> {
+  const { error } = await supabase.from('taches').insert({
+    ...editToRow(e),
+    foyer_id: foyerId,
+    etapes: { debutant: e.steps ?? [], intermediaire: e.steps ?? [], expert: e.steps ?? [] },
+    derniere_fois: e.lastDone ?? null,
+  });
+  fail(error);
+}
+
+export async function deleteTask(taskId: string): Promise<void> {
+  const { error } = await supabase.from('taches').delete().eq('id', taskId);
+  fail(error);
+}
+
+export async function setActive(taskId: string, value: boolean): Promise<void> {
+  const { error } = await supabase.from('taches').update({ actif: value }).eq('id', taskId);
   fail(error);
 }
 

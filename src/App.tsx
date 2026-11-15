@@ -12,7 +12,11 @@ import {
   saveChoices,
   saveMaterielAbsent,
   saveSettings,
+  createTask,
+  deleteTask,
+  setActive,
   setInSchedule,
+  updateTask,
   setPlannedDay,
   type Foyer as FoyerT,
   type Session,
@@ -21,6 +25,7 @@ import {
 import { ChoosePassword, Loading, Login, NoAccess } from './screens/Auth';
 import { Foyer } from './screens/Foyer';
 import { Guides } from './screens/Guides';
+import { MesTaches } from './screens/MesTaches';
 import { Echeancier } from './screens/Echeancier';
 import { Planning } from './screens/Planning';
 import { TaskSheet } from './screens/TaskSheet';
@@ -53,6 +58,7 @@ export function App() {
   const [tab, setTab] = useState<Tab>('home');
   const [openId, setOpenId] = useState<string | null>(null);
   const [schedule, setSchedule] = useState(false);
+  const [manage, setManage] = useState(false);
   const [error, setError] = useState('');
   const today = useMemo(() => new Date(), []);
   const dark = settings.theme === 'sombre' || (settings.theme === 'auto' && prefersDark());
@@ -109,7 +115,7 @@ export function App() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [tab, openId, schedule]);
+  }, [tab, openId, schedule, manage]);
 
   const changeSettings = (s: UserSettings) => {
     setSettings(s);
@@ -180,6 +186,32 @@ export function App() {
             }
           }}
         />
+      ) : manage ? (
+        <MesTaches
+          tasks={tasks}
+          onBack={() => setManage(false)}
+          onToggleActive={(t) => {
+            const value = !t.active;
+            setTasks((all) => all.map((x) => (x.id === t.id ? { ...x, active: value } : x)));
+            setActive(t.id, value).catch((err) => {
+              setTasks((all) => all.map((x) => (x.id === t.id ? { ...x, active: !value } : x)));
+              setError((err as Error).message);
+            });
+          }}
+          onSave={async (t, edit) => {
+            if (t) await updateTask(t.id, edit);
+            else await createTask(foyer.id, edit);
+            await refresh(foyer);
+          }}
+          onDelete={async (t) => {
+            try {
+              await deleteTask(t.id);
+              await refresh(foyer);
+            } catch (err) {
+              setError((err as Error).message);
+            }
+          }}
+        />
       ) : schedule ? (
         <Echeancier tasks={tasks} today={today} onBack={() => setSchedule(false)} onOpen={(t) => setOpenId(t.id)} onToggleFollow={toggleFollow} />
       ) : (
@@ -203,7 +235,7 @@ export function App() {
             />
           )}
           {tab === 'guides' && <Guides tasks={tasks} onOpen={(t) => setOpenId(t.id)} />}
-          {tab === 'foyer' && <Foyer foyer={foyer} email={session.email} settings={settings} dark={dark} onChange={changeSettings} />}
+          {tab === 'foyer' && <Foyer foyer={foyer} email={session.email} settings={settings} dark={dark} onChange={changeSettings} taskCount={tasks.filter((t) => t.active).length} onOpenTasks={() => setManage(true)} />}
           <TabBar current={tab} onChange={setTab} />
         </>
       )}

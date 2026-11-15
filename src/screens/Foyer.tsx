@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { IconHouse, IconMinus, IconPlus } from '../components/Icons';
+import { IconChevronRight, IconHouse, IconMinus, IconPlus } from '../components/Icons';
 import { Topbar } from '../components/Pinned';
 import { formatMinutes } from '../data/engine';
 import type { Level } from '../data/types';
@@ -29,9 +29,11 @@ type Props = {
   settings: UserSettings;
   dark: boolean;
   onChange: (s: UserSettings) => void;
+  taskCount: number;
+  onOpenTasks: () => void;
 };
 
-export function Foyer({ foyer, email, settings, dark, onChange }: Props) {
+export function Foyer({ foyer, email, settings, dark, onChange, taskCount, onOpenTasks }: Props) {
   const idx = Math.max(0, STEPS_MIN.indexOf(settings.capacity));
   const set = (patch: Partial<UserSettings>) => onChange({ ...settings, ...patch });
   const level = LEVELS.find((l) => l.id === settings.level) ?? LEVELS[1];
@@ -80,7 +82,15 @@ export function Foyer({ foyer, email, settings, dark, onChange }: Props) {
       </header>
 
       <div className="content">
-        <section className="card card--raised" style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <button className="card card--raised" onClick={onOpenTasks} style={{ minHeight: 64, padding: '0 16px', display: 'flex', alignItems: 'center', gap: 12, color: 'var(--ink)', textAlign: 'left' }}>
+          <span style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 16, fontWeight: 700 }}>Mes tâches</span>
+            <span className="meta num">{taskCount} actives · pause, réglages, ajout</span>
+          </span>
+          <IconChevronRight size={18} />
+        </button>
+
+        <section className="card" style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <h2 className="title-2" style={{ fontSize: 17 }}>Mon temps d'entretien par semaine</h2>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <button
