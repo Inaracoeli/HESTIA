@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { IconBook, IconCar, IconChevronRight, IconHouse, IconLeaf, IconSearch } from '../components/Icons';
-import { Pinned } from '../components/Pinned';
+import { Topbar } from '../components/Pinned';
 import { DOMAIN_COLOR, DOMAIN_LABEL, type Domain, type Task } from '../data/types';
 
 const TINT: Record<Domain, [string, string]> = {
@@ -24,14 +24,15 @@ export function Guides({ tasks, onOpen }: Props) {
 
   return (
     <div className="screen">
-      <Pinned title="Guides" offset={70} />
-      <header className="header" style={{ paddingBottom: 62 }}>
+      <Topbar>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className="title-icon" aria-hidden="true">
             <IconBook size={22} className="anim-wiggle" />
           </span>
           <h1 className="title-1">Guides</h1>
         </div>
+      </Topbar>
+      <header className="header" style={{ paddingBottom: 62 }}>
         <span className="header__sub">Savoir quoi faire, et comment.</span>
       </header>
 

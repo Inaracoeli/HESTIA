@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { IconCalendar, IconCalendarPlus } from '../components/Icons';
-import { Pinned } from '../components/Pinned';
+import { Topbar } from '../components/Pinned';
 import { Ring } from '../components/Ring';
 import { formatMinutes, planWeeks, urgency, weekStart } from '../data/engine';
 import { DOMAIN_COLOR, toISODate, type Task } from '../data/types';
@@ -42,16 +42,15 @@ export function Planning({ tasks, today, capacity, onOpen, onPlan }: Props) {
 
   return (
     <div className="screen">
-      <Pinned title="Planning" offset={70} />
-      <header className="header">
-        <div className="header__row">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span className="title-icon" aria-hidden="true">
-              <IconCalendar size={22} className="anim-bounce" />
-            </span>
-            <h1 className="title-1">Planning</h1>
-          </div>
+      <Topbar>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span className="title-icon" aria-hidden="true">
+            <IconCalendar size={22} className="anim-bounce" />
+          </span>
+          <h1 className="title-1">Planning</h1>
         </div>
+      </Topbar>
+      <header className="header">
         <span className="header__sub">Semaine par semaine. Le jour, c'est vous qui voyez.</span>
       </header>
 

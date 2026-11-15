@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { IconHouse, IconMinus, IconPlus } from '../components/Icons';
-import { Pinned } from '../components/Pinned';
+import { Topbar } from '../components/Pinned';
 import { formatMinutes } from '../data/engine';
 import type { Level } from '../data/types';
 import { inviteMember, loadMembers, signOut, type Foyer as FoyerT, type Member, type UserSettings } from '../lib/api';
@@ -67,14 +67,15 @@ export function Foyer({ foyer, email, settings, dark, onChange }: Props) {
 
   return (
     <div className="screen">
-      <Pinned title="Foyer" offset={70} />
-      <header className="header" style={{ paddingBottom: 62 }}>
+      <Topbar>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className="title-icon" aria-hidden="true">
             <IconHouse size={22} className="anim-bounce" />
           </span>
           <h1 className="title-1">Foyer</h1>
         </div>
+      </Topbar>
+      <header className="header" style={{ paddingBottom: 62 }}>
         <span className="header__sub">{foyer.nom}{foyer.description ? ` · ${foyer.description}` : ''}</span>
       </header>
 

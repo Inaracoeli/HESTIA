@@ -13,15 +13,10 @@ export function useScrolledPast(offset: number): boolean {
 }
 
 /**
- * Barre de titre épinglée en haut de l'écran : elle apparaît quand le grand
- * en-tête sort de l'écran, pour toujours savoir où l'on est.
+ * Barre du haut, toujours fixée en haut de l'écran avec ses coins arrondis :
+ * le contenu défile dessous, on sait toujours où l'on est.
  */
-export function Pinned({ title, tone, left, offset = 150 }: { title: ReactNode; tone?: string; left?: ReactNode; offset?: number }) {
-  const on = useScrolledPast(offset);
-  return (
-    <div className={`pinned${tone ? ` pinned--${tone}` : ''}${on ? ' pinned--on' : ''}`} aria-hidden={!on}>
-      {left && <span className="pinned__side" style={{ left: 12 }}>{left}</span>}
-      <span className="pinned__title">{title}</span>
-    </div>
-  );
+export function Topbar({ children, tone }: { children: ReactNode; tone?: string }) {
+  const scrolled = useScrolledPast(4);
+  return <div className={`topbar${tone ? ` topbar--${tone}` : ''}${scrolled ? ' topbar--scrolled' : ''}`}>{children}</div>;
 }

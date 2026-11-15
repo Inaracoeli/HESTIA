@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Wordmark } from '../components/Brand';
 import { IconCheck, IconChevronRight, IconPlus } from '../components/Icons';
-import { Pinned } from '../components/Pinned';
+import { Topbar } from '../components/Pinned';
 import { Ring } from '../components/Ring';
 import { dueDate, formatMinutes, nextExtraTask, planWeeks, urgency, weekStart } from '../data/engine';
 import { DOMAIN_COLOR, DOMAIN_LABEL, toISODate, type Task } from '../data/types';
@@ -41,12 +41,11 @@ export function Today({ tasks, today, capacity, onOpen }: Props) {
 
   return (
     <div className="screen">
-      <Pinned title={<Wordmark size={18} />} offset={90} />
+      <Topbar>
+        <Wordmark size={26} />
+        <span className="num" style={{ fontSize: 13, fontWeight: 700 }}>{DATE_FMT.format(today)}</span>
+      </Topbar>
       <header className="header">
-        <div className="header__row" style={{ alignItems: 'flex-end' }}>
-          <Wordmark size={30} />
-          <span className="num" style={{ fontSize: 13, fontWeight: 700, paddingBottom: 4 }}>{DATE_FMT.format(today)}</span>
-        </div>
         <div className="separator" aria-hidden="true" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <h1 className="title-1 title-home">

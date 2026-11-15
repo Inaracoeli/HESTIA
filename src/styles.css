@@ -3,6 +3,8 @@
   --gold-1: #D6B462;
   --gold-2: #BF9638;
   --gold: linear-gradient(135deg, var(--gold-1) 0%, var(--gold-2) 100%);
+  /* Dégradé horizontal : la barre du haut et l'en-tête se raccordent sans couture. */
+  --gold-h: linear-gradient(90deg, var(--gold-1) 0%, var(--gold-2) 100%);
   --on-gold: #241E19;
   --on-gold-soft: rgba(36, 30, 25, 0.14);
 
@@ -78,10 +80,10 @@ a { color: var(--link); }
 .screen { flex-grow: 1; display: flex; flex-direction: column; padding-bottom: 110px; }
 
 .header {
-  background: var(--gold);
+  background: var(--gold-h);
   color: var(--on-gold);
   border-radius: 0 0 32px 32px;
-  padding: calc(env(safe-area-inset-top) + 24px) 20px 58px 20px;
+  padding: 6px 20px 58px 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -206,26 +208,23 @@ a { color: var(--link); }
   box-shadow: 0 4px 14px rgba(150, 110, 30, 0.35);
 }
 
-/* ---------- Titre épinglé ---------- */
-.pinned {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 30;
-  max-width: 560px; margin: 0 auto;
-  padding: calc(env(safe-area-inset-top) + 8px) 16px 10px 16px;
-  display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px;
-  background: linear-gradient(135deg, rgba(214, 180, 98, 0.94) 0%, rgba(191, 150, 56, 0.94) 100%);
-  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
-  color: var(--on-gold);
-  border-radius: 0 0 22px 22px;
-  box-shadow: 0 6px 18px rgba(80, 55, 10, 0.18);
-  transform: translateY(-110%); opacity: 0;
-  transition: transform 0.28s ease, opacity 0.2s ease;
+/* ---------- Barre du haut, toujours fixée ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 30;
+  background: var(--gold-h); color: var(--on-gold);
+  border-radius: 0 0 26px 26px;
+  padding: calc(env(safe-area-inset-top) + 14px) 20px 14px 20px;
+  min-height: 72px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  transition: box-shadow 0.2s ease;
 }
-.pinned--on { transform: translateY(0); opacity: 1; }
-.pinned--maison { background: rgba(194, 71, 15, 0.95); color: #FFFDF7; }
-.pinned--exterieur { background: rgba(79, 138, 52, 0.95); color: #FFFDF7; }
-.pinned--vehicule { background: rgba(67, 86, 110, 0.95); color: #FFFDF7; }
-.pinned__title { font-family: var(--font-title); font-size: 18px; font-weight: 700; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pinned__side { position: absolute; top: calc(env(safe-area-inset-top) + 6px); }
+.topbar--scrolled { box-shadow: 0 8px 20px rgba(80, 55, 10, 0.22); }
+/* L'en-tête remonte sous la barre : tout en haut, les coins arrondis ne se voient pas. */
+.topbar + .header, .topbar + .screen > .header:first-child { margin-top: -26px; padding-top: 32px; }
+.topbar--maison { background: #C2470F; color: #FFFDF7; }
+.topbar--exterieur { background: #4F8A34; color: #FFFDF7; }
+.topbar--vehicule { background: #43566E; color: #FFFDF7; }
+.topbar--maison .icon-btn, .topbar--exterieur .icon-btn, .topbar--vehicule .icon-btn { background: rgba(255, 253, 247, 0.18); }
 
 /* ---------- Feuille du bas (choix du jour…) ---------- */
 .sheet-backdrop { position: fixed; inset: 0; z-index: 40; background: rgba(28, 23, 20, 0.45); display: flex; align-items: flex-end; justify-content: center; }
@@ -306,20 +305,21 @@ a { color: var(--link); }
 }
 
 /* ---------- Nom de l'app ---------- */
+/* Le nom reprend exactement les couleurs du logo animé. */
+.lockup { display: inline-flex; align-items: center; white-space: nowrap; }
+.lockup--capsule { background: #241E19; border-radius: 16px; padding: 4px 14px 4px 4px; box-shadow: 0 3px 10px rgba(36, 30, 25, 0.25); }
 .wordmark {
-  font-family: var(--font-name); font-weight: 800; letter-spacing: -0.035em; line-height: 1; white-space: nowrap;
-  /* Braise : dégradé cuivré, le nom ressort sur le doré sans être noir. */
+  font-family: var(--font-name); font-weight: 800; letter-spacing: -0.035em; line-height: 1;
+  background: linear-gradient(180deg, #F3DD95 0%, #D6B462 55%, #BF9638 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.wordmark--braise {
   background: linear-gradient(180deg, #D85A1C 0%, #8E2A05 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 1px 0 rgba(255, 240, 210, 0.55)) drop-shadow(0 3px 6px rgba(110, 50, 0, 0.25));
-}
-.wordmark--ivoire {
-  background: linear-gradient(180deg, #FFFBF0 0%, #FFE7B0 100%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 2px 0 rgba(110, 60, 0, 0.7)) drop-shadow(0 4px 8px rgba(80, 45, 0, 0.35));
+  filter: drop-shadow(0 1px 0 rgba(255, 240, 210, 0.55));
 }
 .wordmark__i { position: relative; display: inline-block; font-family: var(--font-title); font-weight: 900; margin: 0 0.04em; background: inherit; -webkit-background-clip: text; background-clip: text; }
-.wordmark__flame { position: absolute; left: 50%; top: -0.1em; width: 0.38em; height: 0.38em; transform: translateX(-50%); overflow: visible; filter: drop-shadow(0 1px 2px rgba(110, 40, 0, 0.45)); }
+.wordmark__flame { position: absolute; left: 50%; top: -0.1em; width: 0.38em; height: 0.38em; transform: translateX(-50%); overflow: visible; }
 
 /* ---------- Fiche glissable ---------- */
 .swipe-sheet { will-change: transform; background: var(--bg); min-height: 100dvh; }

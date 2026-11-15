@@ -1,6 +1,6 @@
 import { useRef, useState, type TouchEvent } from 'react';
 import { IconCheck, IconChevronLeft } from '../components/Icons';
-import { Pinned } from '../components/Pinned';
+import { Topbar } from '../components/Pinned';
 import { dueDate, formatMinutes } from '../data/engine';
 import { DOMAIN_LABEL, resolveSteps, type Level, type Task } from '../data/types';
 
@@ -97,25 +97,15 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
 
   return (
     <div className="swipe-sheet" style={swipe.style} {...swipe.handlers}>
-      <Pinned
-        title={task.title}
-        tone={task.domain}
-        offset={140}
-        left={
-          <button className="icon-btn" aria-label="Retour" onClick={onBack} style={{ width: 40, height: 40, background: 'rgba(255,253,247,0.18)' }}>
-            <IconChevronLeft size={18} />
-          </button>
-        }
-      />
+      <Topbar tone={task.domain}>
+        <button className="icon-btn" aria-label="Retour" onClick={onBack}>
+          <IconChevronLeft size={20} />
+        </button>
+        <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: 0.4 }}>{DOMAIN_LABEL[task.domain]}</span>
+        <span style={{ width: 44 }} />
+      </Topbar>
       <div className="screen" style={{ paddingBottom: 24 }}>
         <header className={`header header--${task.domain}`} style={{ gap: 18 }}>
-          <div className="header__row">
-            <button className="icon-btn" aria-label="Retour" onClick={onBack}>
-              <IconChevronLeft size={20} />
-            </button>
-            <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: 0.4 }}>{DOMAIN_LABEL[task.domain]}</span>
-            <span style={{ width: 44 }} />
-          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <h1 className="title-1 title-sheet">{task.title}</h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
