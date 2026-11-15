@@ -76,11 +76,12 @@ export function App() {
   const [toast, setToast] = useState('');
   const [error, setError] = useState('');
   const today = useMemo(() => new Date(), []);
-  // Question de fin de semaine : du vendredi au dimanche pour la semaine en cours, le lundi pour la précédente.
+  // Bilan de la semaine : les tâches se font surtout du jeudi au dimanche, donc on pose la question
+  // une fois la semaine finie, du dimanche 18 h au mardi soir, sur la semaine qui vient de s'écouler.
   const feedbackWeek = useMemo(() => {
     const day = today.getDay();
-    if (day === 5 || day === 6 || day === 0) return toISODate(weekStart(today));
-    if (day === 1) return toISODate(weekStart(new Date(today.getTime() - 3 * 86400000)));
+    if (day === 0 && today.getHours() >= 18) return toISODate(weekStart(today));
+    if (day === 1 || day === 2) return toISODate(weekStart(new Date(today.getTime() - 7 * 86400000)));
     return null;
   }, [today]);
   const dark = settings.theme === 'sombre' || (settings.theme === 'auto' && prefersDark());
@@ -186,7 +187,7 @@ export function App() {
       if (next !== settings.capacity) changeSettings({ ...settings, capacity: next });
       const fmt = (m: number) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ' ' + (m % 60) : ''}`);
       setToast(
-        avis === 'bien' ? 'Parfait, on garde ce rythme.'
+        avis === 'bien' ? 'Parfait, on garde ce rythme pour la semaine qui commence.'
           : next === settings.capacity ? 'Noté. Vous êtes déjà au palier ' + (avis === 'trop' ? 'le plus bas.' : 'le plus haut.')
           : `Noté : ${fmt(next)} par semaine désormais. Modifiable dans Foyer.`,
       );

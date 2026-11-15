@@ -9,6 +9,7 @@ import { DOMAIN_COLOR, DOMAIN_LABEL, toISODate, type Task } from '../data/types'
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
 const SHORT_FMT = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
 const WEEKDAY_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' });
+const RANGE_FMT = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' });
 
 type Props = {
   tasks: Task[];
@@ -29,6 +30,10 @@ export function Today({ tasks, today, capacity, onOpen, feedbackWeek, feedbackGi
   const doneIds = new Set(doneThisWeek.map((t) => t.id));
   const [week] = planWeeks(tasks.filter((t) => !doneIds.has(t.id)), today, [capacity]);
   const [extraIds, setExtraIds] = useState<string[]>([]);
+  // Tâches faites pendant la semaine du bilan
+  const weekDone = feedbackWeek
+    ? tasks.filter((t) => t.lastDone >= feedbackWeek && t.lastDone <= toISODate(new Date(new Date(feedbackWeek + 'T12:00:00').getTime() + 6 * 86400000)))
+    : [];
   const planned = new Set(week.tasks.map((t) => t.id));
   const extra = extraIds
     .map((id) => tasks.find((t) => t.id === id))
@@ -95,15 +100,23 @@ export function Today({ tasks, today, capacity, onOpen, feedbackWeek, feedbackGi
 
         {feedbackWeek && !feedbackGiven && (
           <section className="card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, borderColor: 'var(--gold-2)' }}>
-            <span style={{ fontSize: 15, fontWeight: 700 }}>{today.getDay() === 1 ? 'La semaine dernière' : 'Cette semaine'}, c'était…</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--link)', letterSpacing: 0.6, textTransform: 'uppercase' }}>
+              Bilan · semaine du {RANGE_FMT.format(new Date(feedbackWeek + 'T12:00:00'))} au {RANGE_FMT.format(new Date(new Date(feedbackWeek + 'T12:00:00').getTime() + 6 * 86400000))}
+            </span>
+            <span style={{ fontSize: 15, lineHeight: 1.4 }}>
+              {weekDone.length === 0
+                ? 'Aucune tâche cochée cette semaine-là.'
+                : `${weekDone.length} tâche${weekDone.length > 1 ? 's' : ''} faite${weekDone.length > 1 ? 's' : ''}, environ ${formatMinutes(weekDone.reduce((s, t) => s + t.minutes, 0))}.`}
+            </span>
+            <span style={{ fontSize: 16, fontWeight: 700 }}>Comment c'était ?</span>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-              {([['trop', 'Trop'], ['bien', 'Bien'], ['pas_assez', 'Pas assez']] as const).map(([v, label]) => (
-                <button key={v} onClick={() => onFeedback(v)} style={{ height: 44, border: '1px solid var(--line)', borderRadius: 12, background: 'var(--bg)', color: 'var(--ink)', fontSize: 14, fontWeight: 700 }}>
+              {([['trop', 'Trop chargé'], ['bien', 'Juste bien'], ['pas_assez', 'J’aurais pu faire plus']] as const).map(([v, label]) => (
+                <button key={v} onClick={() => onFeedback(v)} style={{ minHeight: 52, padding: '6px 8px', border: '1px solid var(--line)', borderRadius: 12, background: 'var(--bg)', color: 'var(--ink)', fontSize: 13, fontWeight: 700, lineHeight: 1.2 }}>
                   {label}
                 </button>
               ))}
             </div>
-            <span className="meta" style={{ fontSize: 12 }}>Hestia ajuste votre temps d'entretien en conséquence.</span>
+            <span className="meta" style={{ fontSize: 12 }}>Votre réponse ajuste le temps prévu pour la semaine qui commence.</span>
           </section>
         )}
 
