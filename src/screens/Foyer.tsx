@@ -123,6 +123,26 @@ export function Foyer({ foyer, email, settings, dark, onChange }: Props) {
           <span className="meta" style={{ fontSize: 13 }}>{level.note}</span>
         </section>
 
+        <section className="card" style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <h2 className="title-2" style={{ fontSize: 17 }}>Style du nom HESTIA</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 4, background: 'var(--divider)', borderRadius: 14, padding: 4 }}>
+            {([['capsule', 'Capsule dorée'], ['braise', 'Braise']] as const).map(([v, label]) => {
+              const on = (settings.brand ?? 'capsule') === v;
+              return (
+                <button
+                  key={v}
+                  aria-pressed={on}
+                  onClick={() => set({ brand: v })}
+                  style={{ height: 44, border: 0, borderRadius: 11, background: on ? 'var(--card)' : 'transparent', color: 'var(--ink)', fontSize: 14, fontWeight: on ? 700 : 500, boxShadow: on ? '0 1px 4px rgba(42,36,32,0.15)' : 'none' }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <span className="meta" style={{ fontSize: 13 }}>Réglage gardé sur cet appareil.</span>
+        </section>
+
         <section className="card card--list">
           <Switch label="Thème sombre" on={dark} onChange={(v) => set({ theme: v ? 'sombre' : 'clair' })} />
           <Switch label="Animations" on={settings.motion} onChange={(v) => set({ motion: v })} />

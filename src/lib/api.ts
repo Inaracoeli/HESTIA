@@ -6,7 +6,14 @@ import { toISODate } from '../data/types';
 export type Role = 'admin' | 'membre';
 export type Foyer = { id: string; nom: string; description: string | null; materielAbsent: string[]; role: Role };
 export type Member = { userId: string; email: string | null; role: Role };
-export type UserSettings = { capacity: number; level: Level; theme: 'auto' | 'clair' | 'sombre'; motion: boolean };
+export type UserSettings = {
+  capacity: number;
+  level: Level;
+  theme: 'auto' | 'clair' | 'sombre';
+  motion: boolean;
+  /** Style du nom, gardé sur l'appareil seulement (choix provisoire). */
+  brand?: 'capsule' | 'braise';
+};
 export type Session = { userId: string; email: string | null };
 
 export const DEFAULT_SETTINGS: UserSettings = { capacity: 90, level: 'intermediaire', theme: 'auto', motion: true };

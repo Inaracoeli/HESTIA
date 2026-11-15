@@ -277,7 +277,7 @@ a { color: var(--link); }
 @keyframes hx-bounce { 0%, 14%, 100% { transform: translateY(0) } 4% { transform: translateY(-6px) } 8% { transform: translateY(0) } 11% { transform: translateY(-2px) } }
 @keyframes hx-wiggle { 0%, 14%, 100% { transform: rotate(0) } 3% { transform: rotate(-12deg) } 7% { transform: rotate(10deg) } 10% { transform: rotate(-4deg) } }
 
-.logo-tile { position: relative; flex-shrink: 0; background: #241E19; display: block; box-shadow: 0 3px 10px rgba(36, 30, 25, 0.25); }
+.logo-tile { position: relative; flex-shrink: 0; background: var(--logo-tile); color: var(--logo-ink); display: block; box-shadow: 0 3px 10px rgba(36, 30, 25, 0.25); }
 .logo-tile > span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
 .logo-flame { animation: hestia-flame 4s infinite; }
 .logo-tool { animation: hestia-tool 16s infinite; }
@@ -305,15 +305,20 @@ a { color: var(--link); }
 }
 
 /* ---------- Nom de l'app ---------- */
-/* Le nom reprend exactement les couleurs du logo animé. */
-.lockup { display: inline-flex; align-items: center; white-space: nowrap; }
-.lockup--capsule { background: #241E19; border-radius: 16px; padding: 4px 14px 4px 4px; box-shadow: 0 3px 10px rgba(36, 30, 25, 0.25); }
+/* Le nom reprend exactement les couleurs du logo animé.
+   Style par défaut : capsule charbon et lettres dorées. Variante « braise » au choix dans Foyer. */
+:root { --logo-tile: #241E19; --logo-ink: #D6B462; --logo-dot: #D6B462; }
+:root[data-brand='braise'] { --logo-tile: #C2470F; --logo-ink: #FFF3D6; --logo-dot: #C2470F; }
+.lockup { display: inline-flex; align-items: center; white-space: nowrap; background: #241E19; border-radius: 16px; padding: 4px 14px 4px 4px; box-shadow: 0 3px 10px rgba(36, 30, 25, 0.25); }
+.lockup .logo-tile { box-shadow: none; }
+:root[data-brand='braise'] .lockup { background: none; padding: 0; box-shadow: none; }
+:root[data-brand='braise'] .lockup .logo-tile { box-shadow: 0 3px 10px rgba(36, 30, 25, 0.25); }
 .wordmark {
   font-family: var(--font-name); font-weight: 800; letter-spacing: -0.035em; line-height: 1;
   background: linear-gradient(180deg, #F3DD95 0%, #D6B462 55%, #BF9638 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.wordmark--braise {
+:root[data-brand='braise'] .wordmark {
   background: linear-gradient(180deg, #D85A1C 0%, #8E2A05 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 1px 0 rgba(255, 240, 210, 0.55));

@@ -1,5 +1,5 @@
 // Logo animé + nom « HESTIA » (i minuscule surmonté d'une flamme).
-// Le nom reprend les couleurs du logo : flamme dorée sur fond charbon.
+// Le nom reprend les couleurs du logo. Style par défaut : capsule charbon, lettres dorées.
 
 export const FLAME_PATH =
   'M32 6 C44 18 52 28 52 40 A20 20 0 0 1 12 40 C12 33 16 27 21 22 C22 27 25 30 28 30 C26 22 27 13 32 6 Z';
@@ -17,28 +17,19 @@ const TOOLS = [
 
 export type BrandVariant = 'capsule' | 'braise';
 
-const PALETTE: Record<BrandVariant, { tile: string; ink: string; dot: string }> = {
-  capsule: { tile: '#241E19', ink: '#D6B462', dot: '#D6B462' },
-  braise: { tile: '#C2470F', ink: '#FFF3D6', dot: '#C2470F' },
-};
-
-export function LogoTile({ size = 40, variant = 'capsule', shadow = true }: { size?: number; variant?: BrandVariant; shadow?: boolean }) {
+/** Couleurs pilotées par le style choisi (attribut data-brand sur la page). */
+export function LogoTile({ size = 40 }: { size?: number }) {
   const icon = Math.round(size * 0.62);
-  const { tile, ink } = PALETTE[variant];
   return (
-    <span
-      className="logo-tile"
-      aria-hidden="true"
-      style={{ width: size, height: size, borderRadius: Math.round(size * 0.3), background: tile, boxShadow: shadow ? undefined : 'none' }}
-    >
+    <span className="logo-tile" aria-hidden="true" style={{ width: size, height: size, borderRadius: Math.round(size * 0.3) }}>
       <span className="logo-flame">
         <svg width={icon} height={icon} viewBox="0 0 64 64">
-          <path d={FLAME_PATH} fill={ink} />
+          <path d={FLAME_PATH} fill="currentColor" />
         </svg>
       </span>
       {TOOLS.map((tool, i) => (
         <span key={i} className="logo-tool" style={{ animationDelay: `${2 + i * 4}s` }}>
-          <svg width={icon} height={icon} viewBox="0 0 64 64" fill="none" stroke={ink} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round">
+          <svg width={icon} height={icon} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round">
             {tool}
           </svg>
         </span>
@@ -47,17 +38,16 @@ export function LogoTile({ size = 40, variant = 'capsule', shadow = true }: { si
   );
 }
 
-export function Wordmark({ size = 30, variant = 'capsule' }: { size?: number; variant?: BrandVariant }) {
-  const capsule = variant === 'capsule';
+export function Wordmark({ size = 30 }: { size?: number }) {
   return (
-    <span className={`lockup${capsule ? ' lockup--capsule' : ''}`} style={{ gap: Math.round(size * 0.38) }}>
-      <LogoTile size={Math.round(size * 1.35)} variant={variant} shadow={!capsule} />
-      <span role="img" aria-label="Hestia" className={`wordmark${capsule ? '' : ' wordmark--braise'}`} style={{ fontSize: size }}>
+    <span className="lockup" style={{ gap: Math.round(size * 0.38) }}>
+      <LogoTile size={Math.round(size * 1.35)} />
+      <span role="img" aria-label="Hestia" className="wordmark" style={{ fontSize: size }}>
         <span aria-hidden="true">HEST</span>
         <span aria-hidden="true" className="wordmark__i">
           ı
           <svg viewBox="0 0 64 64" className="wordmark__flame">
-            <path className="flicker" fill={PALETTE[variant].dot} d={FLAME_PATH} />
+            <path className="flicker" fill="var(--logo-dot)" d={FLAME_PATH} />
           </svg>
         </span>
         <span aria-hidden="true">A</span>

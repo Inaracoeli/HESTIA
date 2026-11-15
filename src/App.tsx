@@ -80,7 +80,7 @@ export function App() {
       try {
         const [f, s] = await Promise.all([loadFoyer(session.userId), loadSettings(session.userId)]);
         if (cancelled) return;
-        setSettings(s);
+        setSettings((prev) => ({ ...s, brand: prev.brand }));
         setFoyer(f);
         if (f) await refresh(f);
       } catch (err) {
@@ -96,6 +96,7 @@ export function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     document.documentElement.dataset.motion = settings.motion ? 'on' : 'off';
+    document.documentElement.dataset.brand = settings.brand ?? 'capsule';
     try {
       localStorage.setItem(SETTINGS_CACHE, JSON.stringify(settings));
     } catch {
