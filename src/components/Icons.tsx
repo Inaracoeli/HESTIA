@@ -68,3 +68,8 @@ export const IconRepeat = (p: IconProps) => (
 export const IconCalendarPlus = (p: IconProps) => (
   <Stroke {...p}><rect x="4" y="5" width="16" height="15" rx="3" /><path d="M9 3v4M15 3v4M12 11v6M9 14h6" /></Stroke>
 );
+export const IconStar = ({ size = 24, filled = false }: { size?: number; filled?: boolean }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2} strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />
+  </svg>
+);

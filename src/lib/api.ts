@@ -193,6 +193,11 @@ export async function saveChoices(taskId: string, choices: Record<string, string
   fail(error);
 }
 
+export async function setInSchedule(taskId: string, value: boolean): Promise<void> {
+  const { error } = await supabase.from('taches').update({ dans_echeancier: value }).eq('id', taskId);
+  fail(error);
+}
+
 export async function setPlannedDay(foyerId: string, taskId: string, day: string | null): Promise<void> {
   if (day === null) {
     const { error } = await supabase.from('planifications').delete().eq('tache_id', taskId);

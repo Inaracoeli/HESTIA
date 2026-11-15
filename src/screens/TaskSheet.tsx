@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSwipeBack } from '../components/useSwipeBack';
-import { IconCheck, IconChevronLeft } from '../components/Icons';
+import { IconCheck, IconChevronLeft, IconStar } from '../components/Icons';
 import { Topbar } from '../components/Pinned';
 import { dueDate, formatMinutes } from '../data/engine';
 import { DOMAIN_LABEL, resolveSteps, type Level, type Task } from '../data/types';
@@ -23,11 +23,14 @@ type Props = {
   missing: string[];
   onToggleMissing: (tool: string) => void;
   onSaveChoices: (choices: Record<string, string>) => void;
+  onToggleFollow: () => void;
   onBack: () => void;
   onDone: () => Promise<void> | void;
 };
 
-export function TaskSheet({ task, level, today, missing, onToggleMissing, onSaveChoices, onBack, onDone }: Props) {
+export function TaskSheet({ task, level, today, missing, onToggleMissing, onSaveChoices, onToggleFollow, onBack, onDone }: Props) {
+  const automatic = task.importance <= 2;
+  const followed = automatic || task.inSchedule;
   const [choices, setChoices] = useState<Record<string, string>>(task.choices);
   const steps = resolveSteps(task, level, choices);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
@@ -61,7 +64,16 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
           <IconChevronLeft size={20} />
         </button>
         <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: 0.4 }}>{DOMAIN_LABEL[task.domain]}</span>
-        <span style={{ width: 44 }} />
+        <button
+          className="icon-btn"
+          aria-pressed={followed}
+          aria-label={automatic ? 'Suivie d’office dans l’échéancier' : followed ? 'Ne plus suivre dans l’échéancier' : 'Suivre dans l’échéancier'}
+          title={automatic ? 'Tâche importante : toujours dans l’échéancier' : undefined}
+          onClick={automatic ? undefined : onToggleFollow}
+          style={{ color: followed ? '#FFE08A' : 'inherit', opacity: automatic ? 0.75 : 1 }}
+        >
+          <IconStar size={22} filled={followed} />
+        </button>
       </Topbar>
       <div className="screen" style={{ paddingBottom: 24 }}>
         <header className={`header header--${task.domain}`} style={{ gap: 18 }}>

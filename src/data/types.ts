@@ -49,6 +49,11 @@ export const DOMAIN_COLOR: Record<Domain, string> = {
   vehicule: 'var(--vehicule)',
 };
 
+/** Suivie dans l'échéancier : d'office si elle est essentielle ou évite des dégâts coûteux, sinon si on l'a étoilée. */
+export function isFollowed(t: Task): boolean {
+  return t.active && (t.importance <= 2 || t.inSchedule);
+}
+
 /** Étapes à afficher pour un niveau et des réponses données. */
 export function resolveSteps(task: Task, level: Level, choices: Record<string, string>): string[] {
   return task.steps[level]

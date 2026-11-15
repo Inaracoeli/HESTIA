@@ -1,7 +1,8 @@
-import { IconChevronLeft } from '../components/Icons';
+import { useState } from 'react';
+import { IconChevronLeft, IconPlus, IconStar } from '../components/Icons';
 import { Topbar } from '../components/Pinned';
 import { useSwipeBack } from '../components/useSwipeBack';
-import { DOMAIN_COLOR, DOMAIN_LABEL, type Domain, type Task } from '../data/types';
+import { DOMAIN_COLOR, DOMAIN_LABEL, isFollowed, type Domain, type Task } from '../data/types';
 
 const DAY = 24 * 60 * 60 * 1000;
 const MONTH_LETTER = new Intl.DateTimeFormat('fr-FR', { month: 'narrow' });
@@ -31,12 +32,14 @@ export function dueMonths(task: Task, today: Date): Set<number> {
   return months;
 }
 
-type Props = { tasks: Task[]; today: Date; onBack: () => void; onOpen: (t: Task) => void };
+type Props = { tasks: Task[]; today: Date; onBack: () => void; onOpen: (t: Task) => void; onToggleFollow: (t: Task) => void };
 
-export function Echeancier({ tasks, today, onBack, onOpen }: Props) {
+export function Echeancier({ tasks, today, onBack, onOpen, onToggleFollow }: Props) {
   const swipe = useSwipeBack(onBack);
+  const [adding, setAdding] = useState(false);
+  const others = tasks.filter((t) => t.active && t.importance > 2);
   const followed = tasks
-    .filter((t) => t.active && (t.importance <= 2 || t.inSchedule))
+    .filter(isFollowed)
     .sort((a, b) => a.importance - b.importance || a.title.localeCompare(b.title, 'fr'));
   const months = Array.from({ length: 12 }, (_, i) => new Date(today.getFullYear(), today.getMonth() + i, 1));
   const rows = followed.map((t) => ({ task: t, due: dueMonths(t, today) }));
@@ -98,7 +101,12 @@ export function Echeancier({ tasks, today, onBack, onOpen }: Props) {
                 aria-label={`${task.title} : ${[...due].sort((a, b) => a - b).map((i) => MONTH_NAME.format(months[i])).join(', ') || 'rien dans les douze mois'}`}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 32, border: 0, background: 'none', padding: 0, color: 'var(--ink)', textAlign: 'left' }}
               >
-                <span style={{ width: 108, flexShrink: 0, fontSize: 13, fontWeight: 600, lineHeight: 1.15 }}>{task.title}</span>
+                <span style={{ width: 108, flexShrink: 0, fontSize: 13, fontWeight: 600, lineHeight: 1.15 }}>
+                  {task.inSchedule && task.importance > 2 && (
+                    <span style={{ color: 'var(--gold-2)', marginRight: 3, verticalAlign: '-2px', display: 'inline-flex' }}><IconStar size={13} filled /></span>
+                  )}
+                  {task.title}
+                </span>
                 <span style={{ flexGrow: 1, display: 'grid', gridTemplateColumns: 'repeat(12, minmax(0, 1fr))', gap: 3 }}>
                   {months.map((_, i) => (
                     <span key={i} style={{ height: 16, borderRadius: 5, background: due.has(i) ? DOMAIN_COLOR[task.domain] : 'var(--divider)', opacity: due.has(i) ? 1 : 0.55 }} />
@@ -115,6 +123,13 @@ export function Echeancier({ tasks, today, onBack, onOpen }: Props) {
               ))}
             </div>
           </section>
+
+          {others.length > 0 && (
+            <button className="btn-outline" onClick={() => setAdding(true)}>
+              <IconPlus size={18} />
+              Suivre d'autres tâches
+            </button>
+          )}
 
           <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <h2 className="title-2">Les temps forts</h2>
@@ -138,6 +153,36 @@ export function Echeancier({ tasks, today, onBack, onOpen }: Props) {
           </section>
         </div>
       </div>
+
+      {adding && (
+        <div className="sheet-backdrop" onClick={() => setAdding(false)}>
+          <div className="sheet" role="dialog" aria-label="Suivre d'autres tâches" onClick={(e) => e.stopPropagation()} style={{ maxHeight: '80dvh', overflowY: 'auto' }}>
+            <span className="sheet__grip" aria-hidden="true" />
+            <h2 className="title-2">Suivre d'autres tâches</h2>
+            <p className="meta" style={{ margin: 0, fontSize: 13, lineHeight: 1.4 }}>
+              Les tâches importantes sont toujours suivies. Étoilez les autres pour les voir dans l'échéancier.
+            </p>
+            <div className="card card--list">
+              {others.map((t) => (
+                <button
+                  key={t.id}
+                  className="task-row"
+                  style={{ minHeight: 56 }}
+                  aria-pressed={t.inSchedule}
+                  onClick={() => onToggleFollow(t)}
+                >
+                  <span className="dot" style={{ background: DOMAIN_COLOR[t.domain] }} />
+                  <span className="task-row__text"><span className="task-row__title" style={{ fontSize: 15 }}>{t.title}</span></span>
+                  <span style={{ color: t.inSchedule ? 'var(--gold-2)' : 'var(--ink-soft)', display: 'flex' }}>
+                    <IconStar size={24} filled={t.inSchedule} />
+                  </span>
+                </button>
+              ))}
+            </div>
+            <button className="btn-gold" onClick={() => setAdding(false)}>Terminé</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

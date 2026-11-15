@@ -12,6 +12,7 @@ import {
   saveChoices,
   saveMaterielAbsent,
   saveSettings,
+  setInSchedule,
   setPlannedDay,
   type Foyer as FoyerT,
   type Session,
@@ -133,6 +134,15 @@ export function App() {
 
   const open = openId ? tasks.find((t) => t.id === openId) ?? null : null;
 
+  const toggleFollow = (task: Task) => {
+    const value = !task.inSchedule;
+    setTasks((all) => all.map((t) => (t.id === task.id ? { ...t, inSchedule: value } : t)));
+    setInSchedule(task.id, value).catch((err) => {
+      setTasks((all) => all.map((t) => (t.id === task.id ? { ...t, inSchedule: !value } : t)));
+      setError((err as Error).message);
+    });
+  };
+
   const toggleMissing = async (tool: string) => {
     const list = foyer.materielAbsent.includes(tool) ? foyer.materielAbsent.filter((x) => x !== tool) : [...foyer.materielAbsent, tool];
     setFoyer({ ...foyer, materielAbsent: list });
@@ -154,6 +164,7 @@ export function App() {
           today={today}
           missing={foyer.materielAbsent}
           onToggleMissing={toggleMissing}
+          onToggleFollow={() => toggleFollow(open)}
           onSaveChoices={(choices) => {
             setTasks((all) => all.map((t) => (t.id === open.id ? { ...t, choices } : t)));
             saveChoices(open.id, choices).catch((err) => setError((err as Error).message));
@@ -170,7 +181,7 @@ export function App() {
           }}
         />
       ) : schedule ? (
-        <Echeancier tasks={tasks} today={today} onBack={() => setSchedule(false)} onOpen={(t) => setOpenId(t.id)} />
+        <Echeancier tasks={tasks} today={today} onBack={() => setSchedule(false)} onOpen={(t) => setOpenId(t.id)} onToggleFollow={toggleFollow} />
       ) : (
         <>
           {tab === 'home' && <Today tasks={tasks} today={today} capacity={settings.capacity} onOpen={(t) => setOpenId(t.id)} />}
