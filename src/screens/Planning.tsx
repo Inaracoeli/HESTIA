@@ -17,9 +17,10 @@ type Props = {
   capacity: number;
   onOpen: (t: Task) => void;
   onPlan: (t: Task, day: string | null) => Promise<void>;
+  onSchedule: () => void;
 };
 
-export function Planning({ tasks, today, capacity, onOpen, onPlan }: Props) {
+export function Planning({ tasks, today, capacity, onOpen, onPlan, onSchedule }: Props) {
   const todayISO = toISODate(today);
   const monday = toISODate(weekStart(today));
   const pending = tasks.filter((t) => !(t.lastDone >= monday && t.lastDone <= todayISO));
@@ -49,6 +50,10 @@ export function Planning({ tasks, today, capacity, onOpen, onPlan }: Props) {
           </span>
           <h1 className="title-1">Planning</h1>
         </div>
+        <button className="pill-btn" onClick={onSchedule} aria-label="Ouvrir l'échéancier de l'année">
+          <IconCalendar size={18} />
+          Échéancier
+        </button>
       </Topbar>
       <header className="header">
         <span className="header__sub">Semaine par semaine. Le jour, c'est vous qui voyez.</span>

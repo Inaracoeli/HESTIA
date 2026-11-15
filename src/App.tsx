@@ -20,6 +20,7 @@ import {
 import { ChoosePassword, Loading, Login, NoAccess } from './screens/Auth';
 import { Foyer } from './screens/Foyer';
 import { Guides } from './screens/Guides';
+import { Echeancier } from './screens/Echeancier';
 import { Planning } from './screens/Planning';
 import { TaskSheet } from './screens/TaskSheet';
 import { Today } from './screens/Today';
@@ -50,6 +51,7 @@ export function App() {
   const [settings, setSettings] = useState<UserSettings>(cachedSettings);
   const [tab, setTab] = useState<Tab>('home');
   const [openId, setOpenId] = useState<string | null>(null);
+  const [schedule, setSchedule] = useState(false);
   const [error, setError] = useState('');
   const today = useMemo(() => new Date(), []);
   const dark = settings.theme === 'sombre' || (settings.theme === 'auto' && prefersDark());
@@ -106,7 +108,7 @@ export function App() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [tab, openId]);
+  }, [tab, openId, schedule]);
 
   const changeSettings = (s: UserSettings) => {
     setSettings(s);
@@ -167,6 +169,8 @@ export function App() {
             }
           }}
         />
+      ) : schedule ? (
+        <Echeancier tasks={tasks} today={today} onBack={() => setSchedule(false)} onOpen={(t) => setOpenId(t.id)} />
       ) : (
         <>
           {tab === 'home' && <Today tasks={tasks} today={today} capacity={settings.capacity} onOpen={(t) => setOpenId(t.id)} />}
@@ -176,6 +180,7 @@ export function App() {
               today={today}
               capacity={settings.capacity}
               onOpen={(t) => setOpenId(t.id)}
+              onSchedule={() => setSchedule(true)}
               onPlan={async (t, day) => {
                 try {
                   await setPlannedDay(foyer.id, t.id, day);

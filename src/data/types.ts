@@ -31,6 +31,8 @@ export type Task = {
   steps: Record<Level, Step[]>;
   questions: Question[];
   choices: Record<string, string>;
+  /** Affichée dans l'échéancier même si elle n'est pas prioritaire */
+  inSchedule: boolean;
   /** Jour choisi par l'utilisateur (AAAA-MM-JJ), facultatif */
   plannedDay?: string;
 };

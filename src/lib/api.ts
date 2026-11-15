@@ -140,6 +140,7 @@ type TaskRow = {
   questions: Task['questions'] | null;
   choix: Record<string, string> | null;
   derniere_fois: string | null;
+  dans_echeancier: boolean | null;
   planifications: { jour: string } | { jour: string }[] | null;
 };
 
@@ -165,6 +166,7 @@ function toTask(r: TaskRow, today: Date): Task {
     questions: r.questions ?? [],
     choices: r.choix ?? {},
     lastDone: r.derniere_fois ?? fallback,
+    inSchedule: !!r.dans_echeancier,
     plannedDay: plan?.jour,
   };
 }
