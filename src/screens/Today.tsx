@@ -98,6 +98,11 @@ export function Today({ tasks, today, capacity, onOpen, feedbackWeek, feedbackGi
           })}
         </div>
 
+        <button className="btn-outline" onClick={addOne}>
+          <IconPlus size={18} />
+          Une tâche de plus
+        </button>
+
         {feedbackWeek && !feedbackGiven && (
           <section className="card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, borderColor: 'var(--gold-2)' }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--link)', letterSpacing: 0.6, textTransform: 'uppercase' }}>
@@ -119,11 +124,6 @@ export function Today({ tasks, today, capacity, onOpen, feedbackWeek, feedbackGi
             <span className="meta" style={{ fontSize: 12 }}>Votre réponse ajuste le temps prévu pour la semaine qui commence.</span>
           </section>
         )}
-
-        <button className="btn-outline" onClick={addOne}>
-          <IconPlus size={18} />
-          Une tâche de plus
-        </button>
 
         {upcoming.length > 0 && (
           <section style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>

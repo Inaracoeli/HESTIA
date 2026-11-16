@@ -240,6 +240,7 @@ export function MesTaches({ tasks, onBack, onToggleActive, onSave, onDelete }: P
   const swipe = useSwipeBack(onBack);
   const [editing, setEditing] = useState<Task | 'new' | null>(null);
   const [deleting, setDeleting] = useState<Task | null>(null);
+  const [filter, setFilter] = useState<Domain | 'all'>('all');
   const active = tasks.filter((t) => t.active).length;
 
   return (
@@ -265,7 +266,29 @@ export function MesTaches({ tasks, onBack, onToggleActive, onSave, onDelete }: P
             Nouvelle tâche
           </button>
 
-          {DOMAINS.map((d) => {
+          <div
+            role="tablist"
+            aria-label="Filtrer par domaine"
+            style={{ position: 'sticky', top: 'calc(env(safe-area-inset-top) + 76px)', zIndex: 20, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 4, background: 'var(--divider)', borderRadius: 14, padding: 4, boxShadow: 'var(--shadow)' }}
+          >
+            {([['all', 'Tout'], ['maison', 'Maison'], ['exterieur', 'Jardin'], ['vehicule', 'Voiture']] as const).map(([v, label]) => {
+              const on = filter === v;
+              return (
+                <button
+                  key={v}
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => setFilter(v)}
+                  style={{ height: 40, border: 0, borderRadius: 11, background: on ? 'var(--card)' : 'transparent', color: 'var(--ink)', fontSize: 13, fontWeight: on ? 700 : 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, boxShadow: on ? '0 1px 4px rgba(42,36,32,0.15)' : 'none' }}
+                >
+                  {v !== 'all' && <span className="dot" style={{ width: 8, height: 8, background: DOMAIN_COLOR[v] }} />}
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          {DOMAINS.filter((d) => filter === 'all' || filter === d).map((d) => {
             const list = tasks.filter((t) => t.domain === d);
             if (list.length === 0) return null;
             return (

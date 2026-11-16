@@ -8,6 +8,7 @@ import { DOMAIN_COLOR, toISODate, type Task } from '../data/types';
 const RANGE_FMT = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' });
 const DAY_SHORT = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' });
 const DAY_LONG = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+const DATE_LONG = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'long' });
 const WEEK_TITLES = ['Cette semaine', 'Semaine prochaine', 'Dans deux semaines'];
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -26,7 +27,9 @@ export function Planning({ tasks, today, capacity, onOpen, onPlan, onSchedule }:
   const pending = tasks.filter((t) => !(t.lastDone >= monday && t.lastDone <= todayISO));
   const weeks = planWeeks(pending, today, [capacity, capacity, capacity]);
   const placed = new Set(weeks.flatMap((w) => w.tasks.map((t) => t.id)));
-  const later = pending.filter((t) => t.active && !placed.has(t.id));
+  const later = pending
+    .filter((t) => t.active && !placed.has(t.id))
+    .sort((a, b) => (a.plannedDay ?? '9999').localeCompare(b.plannedDay ?? '9999'));
   const [picking, setPicking] = useState<{ task: Task; start: Date } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -118,14 +121,25 @@ export function Planning({ tasks, today, capacity, onOpen, onPlan, onSchedule }:
             <h2 className="title-2" style={{ marginTop: 4 }}>Plus tard</h2>
             <div className="card card--list">
               {later.map((t) => (
-                <button key={t.id} className="task-row" style={{ minHeight: 60 }} onClick={() => onOpen(t)}>
-                  <span className="dot" style={{ background: DOMAIN_COLOR[t.domain] }} />
-                  <span className="task-row__text">
-                    <span className="task-row__title" style={{ fontSize: 15 }}>{t.title}</span>
-                    <span className="meta">{t.pro ? 'À faire faire' : t.periodLabel}</span>
-                  </span>
-                  {t.importance === 1 && <span className="chip">Essentiel</span>}
-                </button>
+                <div key={t.id} style={{ minHeight: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <button className="task-row" style={{ minHeight: 0, padding: '10px 0' }} onClick={() => onOpen(t)}>
+                    <span className="dot" style={{ background: DOMAIN_COLOR[t.domain] }} />
+                    <span className="task-row__text">
+                      <span className="task-row__title" style={{ fontSize: 15 }}>{t.title}</span>
+                      <span className="meta" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                        {t.plannedDay ? `Prévu le ${DATE_LONG.format(new Date(t.plannedDay + 'T12:00:00'))}` : t.pro ? 'À faire faire' : t.periodLabel}
+                        {t.importance === 1 && <span className="chip">Essentiel</span>}
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    aria-label={t.plannedDay ? `Changer la date de ${t.title}` : `Choisir une date pour ${t.title}`}
+                    onClick={() => setPicking({ task: t, start: weekStart(today) })}
+                    style={{ flexShrink: 0, width: 44, height: 44, border: t.plannedDay ? 0 : '1.5px dashed #B9AC9C', borderRadius: 12, background: t.plannedDay ? 'var(--ink)' : 'transparent', color: t.plannedDay ? 'var(--bg)' : 'var(--ink-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <IconCalendarPlus size={20} />
+                  </button>
+                </div>
               ))}
             </div>
           </section>
@@ -136,7 +150,8 @@ export function Planning({ tasks, today, capacity, onOpen, onPlan, onSchedule }:
         <div className="sheet-backdrop" onClick={() => !busy && setPicking(null)}>
           <div className="sheet" role="dialog" aria-label={`Choisir un jour pour ${picking.task.title}`} onClick={(e) => e.stopPropagation()}>
             <span className="sheet__grip" aria-hidden="true" />
-            <h2 className="title-2">Quel jour pour « {picking.task.title} » ?</h2>
+            <h2 className="title-2">Quand faire « {picking.task.title} » ?</h2>
+            <span className="field__label">Cette semaine-là</span>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 6 }}>
               {Array.from({ length: 7 }, (_, k) => new Date(picking.start.getTime() + k * DAY)).map((d) => {
                 const iso = toISODate(d);
@@ -161,8 +176,19 @@ export function Planning({ tasks, today, capacity, onOpen, onPlan, onSchedule }:
                 );
               })}
             </div>
+            <label className="field">
+              <span className="field__label">Ou une autre date</span>
+              <input
+                className="input"
+                type="date"
+                min={todayISO}
+                value={picking.task.plannedDay ?? ''}
+                disabled={busy}
+                onChange={(e) => e.target.value && choose(e.target.value)}
+              />
+            </label>
             {picking.task.plannedDay && (
-              <button className="btn-secondary" disabled={busy} onClick={() => choose(null)}>Pas de jour précis</button>
+              <button className="btn-secondary" disabled={busy} onClick={() => choose(null)}>Pas de date précise</button>
             )}
             <button className="btn-link" onClick={() => setPicking(null)}>Annuler</button>
           </div>

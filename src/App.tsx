@@ -23,6 +23,7 @@ import {
   deleteTask,
   setActive,
   setInSchedule,
+  undoDone,
   updateTask,
   setPlannedDay,
   type Foyer as FoyerT,
@@ -74,6 +75,7 @@ export function App() {
   const [members, setMembers] = useState<Member[]>([]);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [toast, setToast] = useState('');
+  const [toastAction, setToastAction] = useState<{ label: string; run: () => void } | null>(null);
   const [error, setError] = useState('');
   const today = useMemo(() => new Date(), []);
   // Bilan de la semaine : les tâches se font surtout du jeudi au dimanche, donc on pose la question
@@ -133,10 +135,13 @@ export function App() {
   }, [session, feedbackWeek]);
 
   useEffect(() => {
-    if (!toast) return;
-    const id = setTimeout(() => setToast(''), 4000);
+    if (!toast) {
+      setToastAction(null);
+      return;
+    }
+    const id = setTimeout(() => setToast(''), toastAction ? 7000 : 4000);
     return () => clearTimeout(id);
-  }, [toast]);
+  }, [toast, toastAction]);
 
   /* Thème et animations */
   useEffect(() => {
@@ -199,6 +204,17 @@ export function App() {
 
   const showProfile = profileOpen || (foyer.profile === null && !profileLater);
 
+  const undo = async (task: Task) => {
+    try {
+      await undoDone(task.id);
+      await refresh(foyer);
+      setToastAction(null);
+      setToast(`Validation de « ${task.title} » annulée.`);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
   const toggleFollow = (task: Task) => {
     const value = !task.inSchedule;
     setTasks((all) => all.map((t) => (t.id === task.id ? { ...t, inSchedule: value } : t)));
@@ -222,8 +238,20 @@ export function App() {
         </div>
       )}
       {toast && (
-        <div className="notice notice--ok" role="status" style={{ position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom) + 100px)', left: 16, right: 16, zIndex: 50, boxShadow: 'var(--shadow)', maxWidth: 520, margin: '0 auto' }} onClick={() => setToast('')}>
-          {toast}
+        <div className="notice notice--ok" role="status" style={{ position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom) + 100px)', left: 16, right: 16, zIndex: 50, boxShadow: 'var(--shadow)', maxWidth: 520, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ flexGrow: 1 }} onClick={() => setToast('')}>{toast}</span>
+          {toastAction && (
+            <button
+              onClick={() => {
+                const action = toastAction;
+                setToast('');
+                action.run();
+              }}
+              style={{ flexShrink: 0, minHeight: 40, padding: '0 14px', border: 0, borderRadius: 12, background: '#2C5420', color: '#FFFFFF', fontSize: 14, fontWeight: 700 }}
+            >
+              {toastAction.label}
+            </button>
+          )}
         </div>
       )}
       {showProfile ? (
@@ -255,6 +283,11 @@ export function App() {
           missing={foyer.materielAbsent}
           onToggleMissing={toggleMissing}
           onToggleFollow={() => toggleFollow(open)}
+          doneThisWeek={open.lastDone >= toISODate(weekStart(today)) && open.lastDone <= toISODate(today)}
+          onUndo={async () => {
+            await undo(open);
+            setOpenId(null);
+          }}
           onSaveChoices={(choices) => {
             setTasks((all) => all.map((t) => (t.id === open.id ? { ...t, choices } : t)));
             saveChoices(open.id, choices).catch((err) => setError((err as Error).message));
@@ -262,9 +295,12 @@ export function App() {
           onBack={() => setOpenId(null)}
           onDone={async (cost, note) => {
             try {
-              await markDone(foyer.id, session.userId, open.id, today, cost, note);
+              const task = open;
+              await markDone(foyer.id, session.userId, task.id, today, cost, note);
               await refresh(foyer);
               setOpenId(null);
+              setToastAction({ label: 'Annuler', run: () => undo(task) });
+              setToast(`« ${task.title} » noté au carnet.`);
             } catch (err) {
               setError((err as Error).message);
             }

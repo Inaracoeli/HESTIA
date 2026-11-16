@@ -208,6 +208,21 @@ export async function markDone(foyerId: string, userId: string, taskId: string, 
   await supabase.from('planifications').delete().eq('tache_id', taskId);
 }
 
+/** Annule la dernière validation d'une tâche (« C'est fait » par erreur). */
+export async function undoDone(taskId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('realisations')
+    .select('id')
+    .eq('tache_id', taskId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  fail(error);
+  const id = data?.[0]?.id as string | undefined;
+  if (!id) throw new Error('Rien à annuler pour cette tâche.');
+  const { error: e2 } = await supabase.from('realisations').delete().eq('id', id);
+  fail(e2);
+}
+
 export async function saveChoices(taskId: string, choices: Record<string, string>): Promise<void> {
   const { error } = await supabase.from('taches').update({ choix: choices }).eq('id', taskId);
   fail(error);

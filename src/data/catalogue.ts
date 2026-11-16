@@ -1,6 +1,7 @@
 // Catalogue Hestia : toutes les tâches que l'app sait proposer, et à quelles conditions.
 // Les rythmes légaux sont sourcés ; les autres sont des repères courants, réglables dans « Mes tâches ».
 import base from './catalogue-base.json';
+import { CATALOGUE_EXTRA } from './catalogue-extra';
 import type { Domain, Importance, Question, Step } from './types';
 
 /* ---------- Profil du foyer ---------- */
@@ -11,9 +12,11 @@ export type Profile = {
   equipements: string[];
   exterieur: string[];
   vehicules: string[];
+  /** Rappels facultatifs : ménage de fond, chaussures… */
+  extras?: string[];
 };
 
-export const EMPTY_PROFILE: Profile = { logement: 'maison', chauffage: [], equipements: [], exterieur: [], vehicules: [] };
+export const EMPTY_PROFILE: Profile = { logement: 'maison', chauffage: [], equipements: [], exterieur: [], vehicules: [], extras: [] };
 
 export const PROFILE_OPTIONS = {
   chauffage: [
@@ -35,6 +38,12 @@ export const PROFILE_OPTIONS = {
     ['lave_linge', 'Lave-linge'],
     ['lave_vaisselle', 'Lave-vaisselle'],
     ['hotte', 'Hotte de cuisine'],
+    ['seche_linge', 'Sèche-linge'],
+    ['volets', 'Volets roulants'],
+    ['portail', 'Portail motorisé'],
+    ['store', 'Store banne'],
+    ['recuperateur', 'Récupérateur d’eau de pluie'],
+    ['arrosage', 'Arrosage automatique'],
   ],
   exterieur: [
     ['pelouse', 'Pelouse'],
@@ -42,10 +51,20 @@ export const PROFILE_OPTIONS = {
     ['terrasse', 'Terrasse'],
     ['piscine', 'Piscine'],
     ['robinet', 'Robinet extérieur'],
+    ['arbres', 'Arbres ou arbustes (fruitiers compris)'],
+    ['barbecue', 'Barbecue'],
+    ['mobilier', 'Mobilier de jardin'],
   ],
   vehicules: [
     ['thermique', 'Voiture essence ou diesel'],
     ['electrique', 'Voiture électrique'],
+    ['pneus_hiver', 'Pneus hiver (changés chaque saison)'],
+    ['velo', 'Vélos'],
+  ],
+  extras: [
+    ['menage', 'Ménage de fond : façades, tartre, poussière cachée, matelas…'],
+    ['congelateur', 'Congélateur à dégivrer (sans « no frost »)'],
+    ['chaussures', 'Entretien des chaussures'],
   ],
 } as const;
 
@@ -74,7 +93,7 @@ export type Template = {
 
 const has = (list: string[], ...values: string[]) => values.some((v) => list.includes(v));
 const house = (p: Profile) => p.logement === 'maison';
-const anyCar = (p: Profile) => p.vehicules.length > 0;
+const anyCar = (p: Profile) => has(p.vehicules, 'thermique', 'electrique');
 
 function t(x: Omit<Template, 'tools' | 'alternatives' | 'questions'> & Partial<Pick<Template, 'tools' | 'alternatives' | 'questions'>>): Template {
   return { tools: [], alternatives: {}, questions: [], ...x };
@@ -493,7 +512,10 @@ export const CATALOGUE: { template: Template; when: (p: Profile) => boolean }[] 
       intervalDays: 60, periodLabel: 'Tous les 2 mois', minutes: 10, budget: 5, difficulty: 1, pro: false,
       tools: ['Liquide lave-glace', 'Chiffon'],
       questions: [{ id: 'moteur', label: 'Quelle voiture ?', options: [{ v: 'thermique', l: 'Essence ou diesel' }, { v: 'electrique', l: 'Électrique' }] }],
-      choicesFrom: (p) => (p.vehicules.length === 1 ? { moteur: p.vehicules[0] } : {}),
+      choicesFrom: (p) => {
+        const cars = p.vehicules.filter((v) => v === 'thermique' || v === 'electrique');
+        return cars.length === 1 ? { moteur: cars[0] } : {};
+      },
       steps: {
         debutant: [
           'Garez-vous à plat, moteur froid.',
@@ -532,6 +554,8 @@ export const CATALOGUE: { template: Template; when: (p: Profile) => boolean }[] 
     }),
   },
 ];
+
+CATALOGUE.push(...CATALOGUE_EXTRA);
 
 /** Modèles utiles pour un profil donné. */
 export function templatesFor(p: Profile): Template[] {

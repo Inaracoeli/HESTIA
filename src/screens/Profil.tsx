@@ -14,6 +14,7 @@ const STEPS: Step[] = [
   { key: 'equipements', title: 'Vos équipements', hint: 'Cochez ce que vous avez.', multi: true },
   { key: 'exterieur', title: 'Vos extérieurs', hint: 'Laissez vide si vous n’en avez pas.', multi: true },
   { key: 'vehicules', title: 'Vos véhicules', hint: 'Laissez vide si vous n’en avez pas.', multi: true },
+  { key: 'extras', title: 'Les petits plus', hint: 'Des rappels pour ce qu’on oublie, avant que ça ne s’accumule.', multi: true },
 ];
 
 type Props = {
@@ -25,7 +26,7 @@ type Props = {
 };
 
 export function Profil({ initial, tasks, firstTime, onCancel, onSave }: Props) {
-  const [profile, setProfile] = useState<Profile>(initial ?? EMPTY_PROFILE);
+  const [profile, setProfile] = useState<Profile>({ ...EMPTY_PROFILE, ...(initial ?? {}) });
   const [index, setIndex] = useState(firstTime ? -1 : 0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -38,7 +39,7 @@ export function Profil({ initial, tasks, firstTime, onCancel, onSave }: Props) {
 
   const toggle = (key: keyof Profile, value: string) => {
     if (key === 'logement') return setProfile({ ...profile, logement: value as Profile['logement'], exterieur: value === 'appartement' ? [] : profile.exterieur });
-    const list = profile[key] as string[];
+    const list = (profile[key] as string[] | undefined) ?? [];
     setProfile({ ...profile, [key]: list.includes(value) ? list.filter((v) => v !== value) : [...list, value] });
   };
 
@@ -66,7 +67,7 @@ export function Profil({ initial, tasks, firstTime, onCancel, onSave }: Props) {
           <div className="card card--raised" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
             <h1 className="title-2" style={{ fontSize: 22 }}>Présentez-nous votre foyer</h1>
             <p style={{ margin: 0, fontSize: 15, lineHeight: 1.45 }}>
-              Cinq questions rapides : Hestia en déduit les entretiens utiles chez vous, et rien de plus.
+              Six questions rapides : Hestia en déduit les entretiens utiles chez vous, et rien de plus.
             </p>
             <button className="btn-gold" onClick={() => setIndex(0)}>Commencer</button>
             <button className="btn-link" onClick={onCancel}>Plus tard</button>
@@ -126,7 +127,7 @@ export function Profil({ initial, tasks, firstTime, onCancel, onSave }: Props) {
                 ? ([['maison', 'Maison'], ['appartement', 'Appartement']] as const)
                 : PROFILE_OPTIONS[step.key as Exclude<keyof Profile, 'logement'>]
               ).map(([value, label]) => {
-                const on = step.key === 'logement' ? profile.logement === value : (profile[step.key] as string[]).includes(value);
+                const on = step.key === 'logement' ? profile.logement === value : ((profile[step.key] as string[] | undefined) ?? []).includes(value);
                 return (
                   <button
                     key={value}

@@ -6,7 +6,7 @@
 // 3. On remplit le temps disponible de la semaine par score décroissant.
 //    Les tâches essentielles (importance 1) arrivées à échéance passent toujours.
 
-import { inSeason, type Task } from './types';
+import { inSeason, toISODate, type Task } from './types';
 
 const DAY = 24 * 60 * 60 * 1000;
 const WEIGHT: Record<Task['importance'], number> = { 1: 4, 2: 2.5, 3: 1.5, 4: 1 };
@@ -52,16 +52,30 @@ export function planWeeks(tasks: Task[], today: Date, capacities: number[]): Wee
   const pool = tasks.filter((t) => t.active);
   const placed = new Set<string>();
   const start0 = weekStart(today);
+  const todayISO = toISODate(today);
+  const lastEnd = toISODate(new Date(start0.getTime() + (capacities.length * 7 - 1) * DAY));
+  // Une tâche planifiée plus tard que les semaines affichées ne doit pas être proposée avant.
+  pool.forEach((t) => {
+    if (t.plannedDay && t.plannedDay > lastEnd) placed.add(t.id);
+  });
 
   return capacities.map((capacity, w) => {
     const start = new Date(start0.getTime() + w * 7 * DAY);
     const end = new Date(start.getTime() + 6 * DAY);
+    const startISO = toISODate(start);
+    const endISO = toISODate(end);
+
+    // 1. Les tâches dont on a choisi le jour dans cette semaine passent en premier.
+    const chosen: Task[] = pool.filter(
+      (t) => !placed.has(t.id) && t.plannedDay && t.plannedDay >= startISO && t.plannedDay <= endISO && t.plannedDay >= todayISO,
+    );
+    chosen.forEach((t) => placed.add(t.id));
+    let minutes = chosen.reduce((s, t) => s + t.minutes, 0);
+
+    // 2. Puis les tâches mûres, par priorité, dans la limite du temps disponible.
     const ripe = pool
       .filter((t) => !placed.has(t.id) && (inSeason(t, start) || inSeason(t, end)) && urgency(t, end) >= 0.85)
       .sort((a, b) => score(b, end) - score(a, end));
-
-    const chosen: Task[] = [];
-    let minutes = 0;
     for (const t of ripe) {
       const mustDo = t.importance === 1 && urgency(t, end) >= 1;
       if (mustDo || minutes + t.minutes <= capacity) {
@@ -77,7 +91,7 @@ export function planWeeks(tasks: Task[], today: Date, capacities: number[]): Wee
 /** Tâche suivante à proposer quand on demande « une tâche de plus ». */
 export function nextExtraTask(tasks: Task[], exclude: Set<string>, today: Date): Task | undefined {
   return tasks
-    .filter((t) => t.active && !exclude.has(t.id) && inSeason(t, today))
+    .filter((t) => t.active && !exclude.has(t.id) && inSeason(t, today) && !(t.plannedDay && t.plannedDay > toISODate(new Date(today.getTime() + 7 * DAY))))
     .sort((a, b) => score(b, today) - score(a, today))[0];
 }
 

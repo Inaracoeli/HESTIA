@@ -24,11 +24,14 @@ type Props = {
   onToggleMissing: (tool: string) => void;
   onSaveChoices: (choices: Record<string, string>) => void;
   onToggleFollow: () => void;
+  /** Déjà validée cette semaine : on propose d'annuler */
+  doneThisWeek: boolean;
+  onUndo: () => Promise<void>;
   onBack: () => void;
   onDone: (cost: number | null, note: string) => Promise<void> | void;
 };
 
-export function TaskSheet({ task, level, today, missing, onToggleMissing, onSaveChoices, onToggleFollow, onBack, onDone }: Props) {
+export function TaskSheet({ task, level, today, missing, onToggleMissing, onSaveChoices, onToggleFollow, doneThisWeek, onUndo, onBack, onDone }: Props) {
   const automatic = task.importance <= 2;
   const followed = automatic || task.inSchedule;
   const [choices, setChoices] = useState<Record<string, string>>(task.choices);
@@ -208,6 +211,19 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
                 })}
               </div>
             </section>
+          )}
+
+          {doneThisWeek && (
+            <div className="notice notice--ok" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ flexGrow: 1 }}>Faite le {new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(task.lastDone + 'T12:00:00'))}.</span>
+              <button
+                onClick={async () => { setSaving(true); try { await onUndo(); } finally { setSaving(false); } }}
+                disabled={saving}
+                style={{ flexShrink: 0, minHeight: 40, padding: '0 12px', border: '1px solid #2C5420', borderRadius: 12, background: 'transparent', color: '#2C5420', fontSize: 13, fontWeight: 700 }}
+              >
+                Annuler « C'est fait »
+              </button>
+            </div>
           )}
 
           <div style={{ display: 'flex', gap: 10, padding: '4px 0 12px 0' }}>
