@@ -30,7 +30,12 @@ export function Planning({ tasks, today, capacity, onOpen, onPlan, onSchedule }:
   const later = pending
     .filter((t) => t.active && !placed.has(t.id))
     .sort((a, b) => (a.plannedDay ?? '9999').localeCompare(b.plannedDay ?? '9999'));
-  const [picking, setPicking] = useState<{ task: Task; start: Date } | null>(null);
+  const [picking, setPickingState] = useState<{ task: Task; start: Date } | null>(null);
+  const [otherDate, setOtherDate] = useState('');
+  const setPicking = (p: { task: Task; start: Date } | null) => {
+    setPickingState(p);
+    setOtherDate('');
+  };
   const [busy, setBusy] = useState(false);
 
   const choose = async (day: string | null) => {
@@ -176,17 +181,32 @@ export function Planning({ tasks, today, capacity, onOpen, onPlan, onSchedule }:
                 );
               })}
             </div>
-            <label className="field">
-              <span className="field__label">Ou une autre date</span>
-              <input
-                className="input"
-                type="date"
-                min={todayISO}
-                value={picking.task.plannedDay ?? ''}
-                disabled={busy}
-                onChange={(e) => e.target.value && choose(e.target.value)}
-              />
-            </label>
+            {/* Le calendrier de l'iPhone s'ouvre au toucher ; la date n'est enregistrée qu'avec « Valider ». */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+              <label
+                style={{
+                  position: 'relative', flexGrow: 1, minHeight: 48, borderRadius: 14, border: '1px solid var(--line)', background: 'var(--card)',
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', color: 'var(--ink)', fontSize: 15, fontWeight: 600, overflow: 'hidden',
+                }}
+              >
+                <span style={{ color: 'var(--link)', display: 'flex' }}><IconCalendar size={20} /></span>
+                <span style={{ flexGrow: 1 }}>{otherDate ? DATE_LONG.format(new Date(otherDate + 'T12:00:00')) : 'Une autre date…'}</span>
+                <input
+                  type="date"
+                  aria-label="Choisir une autre date"
+                  min={todayISO}
+                  value={otherDate}
+                  disabled={busy}
+                  onChange={(e) => setOtherDate(e.target.value)}
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', fontSize: 16 }}
+                />
+              </label>
+              {otherDate && (
+                <button className="btn-gold" style={{ height: 'auto', minHeight: 48, padding: '0 18px', fontSize: 15 }} disabled={busy || otherDate < todayISO} onClick={() => choose(otherDate)}>
+                  Valider
+                </button>
+              )}
+            </div>
             {picking.task.plannedDay && (
               <button className="btn-secondary" disabled={busy} onClick={() => choose(null)}>Pas de date précise</button>
             )}

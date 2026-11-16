@@ -39,6 +39,8 @@ export type Task = {
   inSchedule: boolean;
   /** Mois où la tâche a du sens (1 à 12) ; vide = toute l'année */
   months: number[];
+  /** Date de la dernière validation enregistrée au carnet (« C'est fait »), s'il y en a une */
+  lastValidated?: string;
   /** Jour choisi par l'utilisateur (AAAA-MM-JJ), facultatif */
   plannedDay?: string;
 };

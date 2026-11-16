@@ -283,7 +283,7 @@ export function App() {
           missing={foyer.materielAbsent}
           onToggleMissing={toggleMissing}
           onToggleFollow={() => toggleFollow(open)}
-          doneThisWeek={open.lastDone >= toISODate(weekStart(today)) && open.lastDone <= toISODate(today)}
+          doneThisWeek={!!open.lastValidated && open.lastValidated >= toISODate(weekStart(today)) && open.lastValidated <= toISODate(today)}
           onUndo={async () => {
             await undo(open);
             setOpenId(null);

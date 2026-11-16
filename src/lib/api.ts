@@ -152,6 +152,7 @@ type TaskRow = {
   dans_echeancier: boolean | null;
   mois: number[] | null;
   planifications: { jour: string } | { jour: string }[] | null;
+  realisations: { fait_le: string }[] | null;
 };
 
 function toTask(r: TaskRow, today: Date): Task {
@@ -181,13 +182,14 @@ function toTask(r: TaskRow, today: Date): Task {
     inSchedule: !!r.dans_echeancier,
     months: r.mois ?? [],
     plannedDay: plan?.jour,
+    lastValidated: (r.realisations ?? []).reduce<string | undefined>((m, x) => (!m || x.fait_le > m ? x.fait_le : m), undefined),
   };
 }
 
 export async function loadTasks(foyerId: string, today: Date): Promise<Task[]> {
   const { data, error } = await supabase
     .from('taches')
-    .select('*, planifications(jour)')
+    .select('*, planifications(jour), realisations(fait_le)')
     .eq('foyer_id', foyerId)
     .order('created_at');
   fail(error);
