@@ -49,7 +49,7 @@ export function Esprit({ onBack }: { onBack: () => void }) {
             </p>
           </Point>
 
-          <Point n={2} title="Ouvrez « Ma semaine », c'est tout">
+          <Point n={2} title="Ouvrez « Semaine », c'est tout">
             <p style={{ margin: 0 }}>
               La liste du jour, c'est celle de la semaine : pas de jour imposé. Faites ces tâches quand ça vous arrange, le week-end par
               exemple. Besoin de bloquer un jour précis ? Touchez le petit calendrier dans le Planning.
@@ -101,7 +101,7 @@ export function Esprit({ onBack }: { onBack: () => void }) {
 
           <Point n={7} title="Ce qui ne vous concerne pas, on le met de côté">
             <p style={{ margin: 0 }}>
-              Dans <strong>Mon foyer › Mes tâches</strong>, une bascule met une tâche en pause, sans rien perdre. Un nouvel équipement ? Mettez à jour
+              Dans <strong>Foyer › Mes tâches</strong>, une bascule met une tâche en pause, sans rien perdre. Un nouvel équipement ? Mettez à jour
               la composition de la maison, ou créez votre propre tâche.
             </p>
           </Point>

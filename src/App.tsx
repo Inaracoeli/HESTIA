@@ -151,7 +151,7 @@ export function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     document.documentElement.dataset.motion = settings.motion ? 'on' : 'off';
-    document.documentElement.dataset.brand = settings.brand ?? 'capsule';
+    document.documentElement.dataset.brand = 'capsule';
     try {
       localStorage.setItem(SETTINGS_CACHE, JSON.stringify(settings));
     } catch {
