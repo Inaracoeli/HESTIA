@@ -13,7 +13,7 @@ type Props = {
   onOpenJournal: () => void;
 };
 
-/** « Chez moi » : tout ce qui concerne la maison et le foyer. Les réglages personnels sont à part. */
+/** « Mon foyer » : tout ce qui concerne la maison et le foyer. Les réglages personnels sont à part. */
 export function Foyer({ foyer, taskCount, onOpenTasks, onOpenProfile, onOpenJournal, onOpenSettings, onOpenGuide }: Props) {
   const isAdmin = foyer.role === 'admin';
 
@@ -52,14 +52,14 @@ export function Foyer({ foyer, taskCount, onOpenTasks, onOpenProfile, onOpenJour
           <span className="title-icon" aria-hidden="true">
             <IconHouse size={22} className="anim-bounce" />
           </span>
-          <h1 className="title-1">Chez moi</h1>
+          <h1 className="title-1">Mon foyer</h1>
         </div>
         <button className="icon-btn" aria-label="Réglages" onClick={onOpenSettings}>
           <IconGear size={22} />
         </button>
       </Topbar>
       <header className="header" style={{ paddingBottom: 62 }}>
-        <span className="header__sub">{foyer.nom}{foyer.description ? ` · ${foyer.description}` : ''}</span>
+        <span className="header__sub">{foyer.description || foyer.nom}</span>
       </header>
 
       <div className="content">

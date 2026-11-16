@@ -101,7 +101,7 @@ export function Esprit({ onBack }: { onBack: () => void }) {
 
           <Point n={7} title="Ce qui ne vous concerne pas, on le met de côté">
             <p style={{ margin: 0 }}>
-              Dans <strong>Chez moi › Mes tâches</strong>, une bascule met une tâche en pause, sans rien perdre. Un nouvel équipement ? Mettez à jour
+              Dans <strong>Mon foyer › Mes tâches</strong>, une bascule met une tâche en pause, sans rien perdre. Un nouvel équipement ? Mettez à jour
               la composition de la maison, ou créez votre propre tâche.
             </p>
           </Point>
