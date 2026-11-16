@@ -14,9 +14,9 @@ const ICON: Record<Domain, ReactNode> = {
   vehicule: <IconCar size={26} />,
 };
 
-type Props = { tasks: Task[]; onOpen: (t: Task) => void };
+type Props = { tasks: Task[]; onOpen: (t: Task) => void; onOpenGuide: () => void };
 
-export function Guides({ tasks, onOpen }: Props) {
+export function Guides({ tasks, onOpen, onOpenGuide }: Props) {
   const [filter, setFilter] = useState<Domain | 'all'>('all');
   const [query, setQuery] = useState('');
   const q = query.trim().toLowerCase();
@@ -37,6 +37,18 @@ export function Guides({ tasks, onOpen }: Props) {
       </header>
 
       <div className="content">
+        {!q && (
+          <button className="card" onClick={onOpenGuide} style={{ border: 0, textAlign: 'left', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, color: 'var(--ink)', font: 'inherit', background: 'var(--card)' }}>
+            <span style={{ flexShrink: 0, width: 38, height: 38, borderRadius: '50%', background: 'var(--gold)', color: 'var(--on-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <IconBook size={20} />
+            </span>
+            <span style={{ display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 }}>
+              <strong style={{ fontSize: 16 }}>Bien utiliser Hestia</strong>
+              <span style={{ fontSize: 14, color: 'var(--ink-soft)' }}>L'esprit de l'app, en 2 minutes.</span>
+            </span>
+            <IconChevronRight size={18} />
+          </button>
+        )}
         <label className="card card--raised" style={{ height: 54, padding: '0 16px', display: 'flex', alignItems: 'center', gap: 10, borderRadius: 18 }}>
           <IconSearch size={20} />
           <input

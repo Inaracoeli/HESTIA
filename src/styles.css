@@ -306,7 +306,7 @@ a { color: var(--link); }
 
 /* ---------- Nom de l'app ---------- */
 /* Le nom reprend exactement les couleurs du logo animé.
-   Style par défaut : capsule charbon et lettres dorées. Variante « braise » au choix dans Foyer. */
+   Style par défaut : capsule charbon et lettres dorées. Variante « braise » au choix dans Réglages. */
 :root { --logo-tile: #241E19; --logo-ink: #D6B462; --logo-dot: #D6B462; }
 :root[data-brand='braise'] { --logo-tile: #C2470F; --logo-ink: #FFF3D6; --logo-dot: #C2470F; }
 .lockup { display: inline-flex; align-items: center; white-space: nowrap; background: #241E19; border-radius: 16px; padding: 4px 14px 4px 4px; box-shadow: 0 3px 10px rgba(36, 30, 25, 0.25); }

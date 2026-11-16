@@ -32,6 +32,8 @@ import {
 } from './lib/api';
 import { ChoosePassword, Loading, Login, NoAccess } from './screens/Auth';
 import { Foyer } from './screens/Foyer';
+import { Esprit } from './screens/Esprit';
+import { Reglages } from './screens/Reglages';
 import { Guides } from './screens/Guides';
 import { MesTaches } from './screens/MesTaches';
 import { Carnet } from './screens/Carnet';
@@ -70,6 +72,8 @@ export function App() {
   const [schedule, setSchedule] = useState(false);
   const [manage, setManage] = useState(false);
   const [journal, setJournal] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileLater, setProfileLater] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
@@ -157,7 +161,7 @@ export function App() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [tab, openId, schedule, manage, journal, profileOpen]);
+  }, [tab, openId, schedule, manage, journal, profileOpen, settingsOpen, guideOpen]);
 
   const changeSettings = (s: UserSettings) => {
     setSettings(s);
@@ -194,7 +198,7 @@ export function App() {
       setToast(
         avis === 'bien' ? 'Parfait, on garde ce rythme pour la semaine qui commence.'
           : next === settings.capacity ? 'Noté. Vous êtes déjà au palier ' + (avis === 'trop' ? 'le plus bas.' : 'le plus haut.')
-          : `Noté : ${fmt(next)} par semaine désormais. Modifiable dans Foyer.`,
+          : `Noté : ${fmt(next)} par semaine désormais. Modifiable dans Réglages.`,
       );
     } catch (err) {
       setFeedback(null);
@@ -272,6 +276,10 @@ export function App() {
             return changes;
           }}
         />
+      ) : guideOpen ? (
+        <Esprit onBack={() => setGuideOpen(false)} />
+      ) : settingsOpen ? (
+        <Reglages email={session.email} settings={settings} dark={dark} onChange={changeSettings} onBack={() => setSettingsOpen(false)} onOpenGuide={() => setGuideOpen(true)} />
       ) : journal ? (
         <Carnet foyerId={foyer.id} members={members} onBack={() => setJournal(false)} onChanged={() => refresh(foyer)} />
       ) : open ? (
@@ -364,8 +372,8 @@ export function App() {
               }}
             />
           )}
-          {tab === 'guides' && <Guides tasks={tasks} onOpen={(t) => setOpenId(t.id)} />}
-          {tab === 'foyer' && <Foyer foyer={foyer} email={session.email} settings={settings} dark={dark} onChange={changeSettings} taskCount={tasks.filter((t) => t.active).length} onOpenTasks={() => setManage(true)} onOpenProfile={() => setProfileOpen(true)} onOpenJournal={() => setJournal(true)} />}
+          {tab === 'guides' && <Guides tasks={tasks} onOpen={(t) => setOpenId(t.id)} onOpenGuide={() => setGuideOpen(true)} />}
+          {tab === 'foyer' && <Foyer foyer={foyer} taskCount={tasks.filter((t) => t.active).length} onOpenTasks={() => setManage(true)} onOpenProfile={() => setProfileOpen(true)} onOpenJournal={() => setJournal(true)} onOpenSettings={() => setSettingsOpen(true)} onOpenGuide={() => setGuideOpen(true)} />}
           <TabBar current={tab} onChange={setTab} />
         </>
       )}

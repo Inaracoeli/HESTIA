@@ -93,7 +93,7 @@ export function Profil({ initial, tasks, firstTime, onCancel, onSave }: Props) {
               {done.resumed.length > 0 && <span><strong>{done.resumed.length}</strong> réactivée{done.resumed.length > 1 ? 's' : ''}.</span>}
               {done.added.length + done.paused.length + done.resumed.length === 0 && <span>Aucun changement dans vos tâches.</span>}
               <span className="meta" style={{ fontSize: 13 }}>
-                Pour les tâches importantes (contrôle technique, chaudière, ramonage…), indiquez la vraie date du dernier passage dans Foyer › Mes tâches : le planning sera exact.
+                Pour les tâches importantes (contrôle technique, chaudière, ramonage…), indiquez la vraie date du dernier passage dans Chez moi › Mes tâches : le planning sera exact.
               </span>
             </div>
             <button className="btn-gold" onClick={onCancel}>Voir mon planning</button>
