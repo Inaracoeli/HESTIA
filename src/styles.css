@@ -572,3 +572,29 @@ html { background: var(--bg); }
 /* Sombre : flamme du logo sans fond, lumineuse */
 :root[data-theme='dark']:not([data-brand='braise']) .logo-tile { box-shadow: none; }
 :root[data-theme='dark']:not([data-brand='braise']) .logo-tile svg { filter: drop-shadow(0 0 4px rgba(255, 200, 90, 0.95)) drop-shadow(0 0 10px rgba(255, 120, 30, 0.6)); }
+
+/* =====================================================================
+   Barres du haut en fondu, 18/11 : plus de cadre ni de liseré.
+   Le fond (verre + teinte du domaine) est porté par un calque qui passe
+   d'opaque à transparent vers le bas, et déborde un peu sous la barre.
+   ===================================================================== */
+.topbar {
+  background: none !important; border: 0 !important; box-shadow: none !important;
+  border-radius: 0; isolation: isolate;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.topbar::before {
+  content: ''; position: absolute; inset: 0 0 -26px 0; z-index: -1; pointer-events: none;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 58%, rgba(0, 0, 0, 0.55) 78%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 58%, rgba(0, 0, 0, 0.55) 78%, transparent 100%);
+  transition: opacity 0.25s ease;
+}
+/* En haut de page, la barre se fond entièrement dans le fond ; elle se densifie au défilement. */
+.topbar:not(.topbar--scrolled)::before { opacity: 0.85; bottom: 0; }
+.topbar--maison::before, .topbar--exterieur::before, .topbar--vehicule::before {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--dom) 32%, transparent), color-mix(in srgb, var(--dom) 10%, transparent)),
+    var(--glass);
+}
