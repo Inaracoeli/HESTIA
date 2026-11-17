@@ -512,7 +512,7 @@ export const CATALOGUE: { template: Template; when: (p: Profile) => boolean }[] 
       intervalDays: 60, periodLabel: 'Tous les 2 mois', minutes: 10, budget: 5, difficulty: 1, pro: false,
       tools: ['Liquide lave-glace', 'Chiffon'],
       questions: [{ id: 'moteur', label: 'Quelle voiture ?', options: [{ v: 'thermique', l: 'Essence ou diesel' }, { v: 'electrique', l: 'Électrique' }] }],
-      choicesFrom: (p) => {
+      choicesFrom: (p): Record<string, string> => {
         const cars = p.vehicules.filter((v) => v === 'thermique' || v === 'electrique');
         return cars.length === 1 ? { moteur: cars[0] } : {};
       },

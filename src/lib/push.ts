@@ -25,7 +25,7 @@ export async function subscribePush(userId: string): Promise<void> {
   const { data, error } = await supabase.functions.invoke(FN, { method: 'GET' });
   if (error || !data?.cle) throw new Error('Service de rappel indisponible pour le moment.');
   const reg = await navigator.serviceWorker.ready;
-  const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toKey(data.cle) }));
+  const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toKey(data.cle).buffer as ArrayBuffer }));
   const j = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
   const { error: e2 } = await supabase.from('abonnements_push').upsert({ endpoint: j.endpoint, user_id: userId, p256dh: j.keys.p256dh, auth: j.keys.auth });
   if (e2) throw new Error(e2.message);

@@ -11,5 +11,5 @@ export function guideFor(templateId?: string | null): Guide | undefined {
   const g = ALL[templateId];
   const videos = VIDEOS[templateId];
   if (!g && !videos) return undefined;
-  return { comprendre: '', ...g, videos };
+  return { ...(g ?? { comprendre: '' }), videos };
 }
