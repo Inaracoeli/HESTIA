@@ -23,7 +23,7 @@ function Point({ n, title, children }: { n: number; title: string; children: Rea
 }
 
 /** L'esprit Hestia : comment bien utiliser l'app sans se prendre la tête. */
-export function Esprit({ onBack }: { onBack: () => void }) {
+export function Esprit({ onBack, onOpenTuto }: { onBack: () => void; onOpenTuto: () => void }) {
   const swipe = useSwipeBack(onBack);
   return (
     <div className="swipe-sheet" style={swipe.style} {...swipe.handlers}>
@@ -42,9 +42,16 @@ export function Esprit({ onBack }: { onBack: () => void }) {
         </header>
 
         <div className="content" style={{ gap: 12, paddingBottom: 24 }}>
+          <button className="card card--raised" onClick={onOpenTuto} style={{ border: 0, textAlign: 'left', padding: '16px', display: 'flex', alignItems: 'center', gap: 12, color: 'var(--ink)', font: 'inherit' }}>
+            <span style={{ flexShrink: 0, width: 40, height: 40, borderRadius: '50%', background: 'var(--gold)', color: 'var(--on-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18 }}>?</span>
+            <span style={{ display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 }}>
+              <strong style={{ fontSize: 16 }}>Bien démarrer</strong>
+              <span style={{ fontSize: 14, color: 'var(--ink-soft)' }}>Le tuto pas à pas, des fonctions essentielles aux plus secondaires.</span>
+            </span>
+          </button>
           <Point n={1} title="Le minimum suffisant">
             <p style={{ margin: 0 }}>
-              Hestia ne vous montre pas tout ce qu'il faudrait faire : seulement ce qui tient dans votre temps de la semaine. Le reste attend
+              Hestia ne vous montre pas tout ce qu'il faudrait faire : seulement ce qui tient dans votre temps de la semaine, jamais plus de cinq tâches. Après une absence, la reprise se fait en douceur. Le reste attend
               son tour, sans culpabiliser. Mieux vaut peu, mais vraiment fait.
             </p>
           </Point>
@@ -124,7 +131,7 @@ export function Esprit({ onBack }: { onBack: () => void }) {
               <IconCheck size={16} />
             </span>
             <span style={{ fontSize: 15, lineHeight: 1.45 }}>
-              En résumé : un coup d'œil en début de semaine, quelques tâches le week-end, une réponse le dimanche soir. Hestia s'occupe du reste.
+              En résumé : le rappel du vendredi recopié sur l'ardoise, quelques tâches le week-end, une réponse le dimanche soir. Hestia s'occupe du reste.
             </span>
           </div>
         </div>

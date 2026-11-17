@@ -4,12 +4,29 @@
 //    (0 = vient d'être fait, 1 = c'est le moment, plus de 1 = en retard).
 // 2. Score = urgence × poids de l'importance.
 // 3. On remplit le temps disponible de la semaine par score décroissant.
-//    Les tâches essentielles (importance 1) arrivées à échéance passent toujours.
+//
+// Toujours en douceur : jamais plus de MAX_TASKS tâches par semaine, et au plus
+// MAX_FORCED tâches essentielles en retard ajoutées au-delà du temps prévu.
+// Ce qui ne rentre pas revient simplement la semaine suivante, sans s'accumuler :
+// l'urgence est plafonnée, une absence de trois semaines ne crée pas d'avalanche.
+// Semaine de reprise (première utilisation ou retour après une absence) :
+// moitié du temps prévu et GENTLE_MAX tâches au plus.
 
 import { inSeason, toISODate, type Task } from './types';
 
 const DAY = 24 * 60 * 60 * 1000;
 const WEIGHT: Record<Task['importance'], number> = { 1: 4, 2: 2.5, 3: 1.5, 4: 1 };
+
+/** Nombre maximal de tâches proposées par semaine */
+export const MAX_TASKS = 5;
+/** Tâches essentielles en retard qui peuvent dépasser le temps prévu */
+export const MAX_FORCED = 2;
+/** Semaine de reprise : nombre maximal de tâches */
+export const GENTLE_MAX = 3;
+/** Au-delà, le retard ne compte plus davantage dans la priorité */
+const URGENCY_CAP = 3;
+/** Absence (jours) à partir de laquelle on reprend en douceur */
+export const GENTLE_AFTER_DAYS = 14;
 
 export function daysBetween(fromISO: string, to: Date): number {
   return Math.floor((to.getTime() - new Date(fromISO + 'T00:00:00').getTime()) / DAY);
@@ -20,7 +37,7 @@ export function urgency(task: Task, at: Date): number {
 }
 
 export function score(task: Task, at: Date): number {
-  return urgency(task, at) * WEIGHT[task.importance];
+  return Math.min(urgency(task, at), URGENCY_CAP) * WEIGHT[task.importance];
 }
 
 /** Prochaine échéance, repoussée au début de la saison si elle tombe hors saison. */
@@ -48,7 +65,7 @@ export function weekStart(d: Date): Date {
  * Prépare les semaines à venir. Une tâche entre dans une semaine si elle sera
  * « mûre » (urgence ≥ 0,85) à la fin de cette semaine.
  */
-export function planWeeks(tasks: Task[], today: Date, capacities: number[]): WeekPlan[] {
+export function planWeeks(tasks: Task[], today: Date, capacities: number[], opts: { gentle?: boolean } = {}): WeekPlan[] {
   const pool = tasks.filter((t) => t.active);
   const placed = new Set<string>();
   const start0 = weekStart(today);
@@ -59,7 +76,10 @@ export function planWeeks(tasks: Task[], today: Date, capacities: number[]): Wee
     if (t.plannedDay && t.plannedDay > lastEnd) placed.add(t.id);
   });
 
-  return capacities.map((capacity, w) => {
+  return capacities.map((fullCapacity, w) => {
+    const gentle = !!opts.gentle && w === 0;
+    const capacity = gentle ? Math.max(30, Math.round(fullCapacity / 2)) : fullCapacity;
+    const maxTasks = gentle ? GENTLE_MAX : MAX_TASKS;
     const start = new Date(start0.getTime() + w * 7 * DAY);
     const end = new Date(start.getTime() + 6 * DAY);
     const startISO = toISODate(start);
@@ -76,9 +96,13 @@ export function planWeeks(tasks: Task[], today: Date, capacities: number[]): Wee
     const ripe = pool
       .filter((t) => !placed.has(t.id) && (inSeason(t, start) || inSeason(t, end)) && urgency(t, end) >= 0.85)
       .sort((a, b) => score(b, end) - score(a, end));
+    let forced = 0;
     for (const t of ripe) {
-      const mustDo = t.importance === 1 && urgency(t, end) >= 1;
-      if (mustDo || minutes + t.minutes <= capacity) {
+      if (chosen.length >= maxTasks) break;
+      const fits = minutes + t.minutes <= capacity;
+      const mustDo = !fits && t.importance === 1 && urgency(t, end) >= 1 && forced < (gentle ? 1 : MAX_FORCED);
+      if (fits || mustDo) {
+        if (mustDo) forced++;
         chosen.push(t);
         minutes += t.minutes;
         placed.add(t.id);
@@ -93,6 +117,16 @@ export function nextExtraTask(tasks: Task[], exclude: Set<string>, today: Date):
   return tasks
     .filter((t) => t.active && !exclude.has(t.id) && inSeason(t, today) && !(t.plannedDay && t.plannedDay > toISODate(new Date(today.getTime() + 7 * DAY))))
     .sort((a, b) => score(b, today) - score(a, today))[0];
+}
+
+/**
+ * Rappel du week-end : 2 ou 3 tâches rapides de la semaine, à recopier sur l'ardoise.
+ * Les essentielles d'abord, puis les plus courtes.
+ */
+export function weekendPicks(week: Task[], n = 3): Task[] {
+  return [...week]
+    .sort((a, b) => (a.importance === 1 ? 0 : 1) - (b.importance === 1 ? 0 : 1) || a.minutes - b.minutes)
+    .slice(0, n);
 }
 
 /** Paliers de temps disponible par semaine (minutes). */

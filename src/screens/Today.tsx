@@ -4,6 +4,7 @@ import { IconCheck, IconChevronRight, IconPlus } from '../components/Icons';
 import { Topbar } from '../components/Pinned';
 import { Ring } from '../components/Ring';
 import { dueDate, formatMinutes, nextExtraTask, planWeeks, urgency, weekStart } from '../data/engine';
+import type { Douceur } from '../lib/douceur';
 import { DOMAIN_COLOR, DOMAIN_LABEL, toISODate, type Task } from '../data/types';
 
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -15,6 +16,7 @@ type Props = {
   tasks: Task[];
   today: Date;
   capacity: number;
+  douceur: Douceur;
   onOpen: (t: Task) => void;
   /** Semaine concernée par la question de fin de semaine, ou null si ce n'est pas le moment */
   feedbackWeek: string | null;
@@ -22,13 +24,13 @@ type Props = {
   onFeedback: (avis: 'trop' | 'bien' | 'pas_assez') => void;
 };
 
-export function Today({ tasks, today, capacity, onOpen, feedbackWeek, feedbackGiven, onFeedback }: Props) {
+export function Today({ tasks, today, capacity, douceur, onOpen, feedbackWeek, feedbackGiven, onFeedback }: Props) {
   const monday = toISODate(weekStart(today));
   const todayISO = toISODate(today);
   // Faites cette semaine : elles restent affichées, cochées.
   const doneThisWeek = tasks.filter((t) => t.active && t.lastDone >= monday && t.lastDone <= todayISO);
   const doneIds = new Set(doneThisWeek.map((t) => t.id));
-  const [week] = planWeeks(tasks.filter((t) => !doneIds.has(t.id)), today, [capacity]);
+  const [week] = planWeeks(tasks.filter((t) => !doneIds.has(t.id)), today, [capacity], { gentle: !!douceur });
   const [extraIds, setExtraIds] = useState<string[]>([]);
   // Tâches faites pendant la semaine du bilan
   const weekDone = feedbackWeek
@@ -72,6 +74,13 @@ export function Today({ tasks, today, capacity, onOpen, feedbackWeek, feedbackGi
       </header>
 
       <div className="content">
+        {douceur && (
+          <div className="notice" style={{ background: 'var(--chip-bg)', color: 'var(--ink)', lineHeight: 1.45 }}>
+            {douceur === 'debut'
+              ? 'Pour commencer, juste quelques tâches cette semaine. Le reste attendra son tour, sans pression.'
+              : 'Content de vous revoir. On reprend en douceur : seulement les tâches les plus utiles cette semaine.'}
+          </div>
+        )}
         <div className="card card--raised card--list" style={{ padding: '0 16px' }}>
           {list.length === 0 && <p className="meta" style={{ padding: '20px 0', margin: 0 }}>Rien à faire cette semaine. Profitez-en.</p>}
           {list.map((t) => {
@@ -103,7 +112,7 @@ export function Today({ tasks, today, capacity, onOpen, feedbackWeek, feedbackGi
           Une tâche de plus
         </button>
 
-        {feedbackWeek && !feedbackGiven && (
+        {feedbackWeek && !feedbackGiven && !douceur && (
           <section className="card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, borderColor: 'var(--gold-2)' }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--link)', letterSpacing: 0.6, textTransform: 'uppercase' }}>
               Bilan · semaine du {RANGE_FMT.format(new Date(feedbackWeek + 'T12:00:00'))} au {RANGE_FMT.format(new Date(new Date(feedbackWeek + 'T12:00:00').getTime() + 6 * 86400000))}

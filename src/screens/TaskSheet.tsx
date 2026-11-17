@@ -3,7 +3,7 @@ import { useSwipeBack } from '../components/useSwipeBack';
 import { IconCheck, IconChevronLeft, IconStar } from '../components/Icons';
 import { Topbar } from '../components/Pinned';
 import { Comprendre, Liens, PlusLoin } from '../components/GuideBlocks';
-import { guideFor } from '../data/guides';
+import { useGuide } from '../data/useGuide';
 import { dueDate, formatMinutes } from '../data/engine';
 import { DOMAIN_LABEL, resolveSteps, type Level, type Task } from '../data/types';
 
@@ -38,14 +38,14 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
   const followed = automatic || task.inSchedule;
   const [choices, setChoices] = useState<Record<string, string>>(task.choices);
   const steps = resolveSteps(task, level, choices);
-  const guide = guideFor(task.templateId);
+  const guide = useGuide(task.templateId);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const swipe = useSwipeBack(onBack);
   const count = steps.filter((s) => checked[s]).length;
   const unanswered = task.questions.filter((q) => !choices[q.id]);
   const days = Math.round((dueDate(task).getTime() - today.getTime()) / DAY);
-  const dueText = days > 1 ? `Échéance dans ${days} jours` : days >= 0 ? 'À faire maintenant' : `En retard de ${-days} jours`;
+  const dueText = days > 1 ? `Échéance dans ${days} jours` : days >= 0 ? 'À faire maintenant' : 'À faire dès que possible';
   const color = `var(--${task.domain})`;
 
   const choose = (q: string, v: string) => {

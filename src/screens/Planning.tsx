@@ -16,16 +16,17 @@ type Props = {
   tasks: Task[];
   today: Date;
   capacity: number;
+  gentle: boolean;
   onOpen: (t: Task) => void;
   onPlan: (t: Task, day: string | null) => Promise<void>;
   onSchedule: () => void;
 };
 
-export function Planning({ tasks, today, capacity, onOpen, onPlan, onSchedule }: Props) {
+export function Planning({ tasks, today, capacity, gentle, onOpen, onPlan, onSchedule }: Props) {
   const todayISO = toISODate(today);
   const monday = toISODate(weekStart(today));
   const pending = tasks.filter((t) => !(t.lastDone >= monday && t.lastDone <= todayISO));
-  const weeks = planWeeks(pending, today, [capacity, capacity, capacity]);
+  const weeks = planWeeks(pending, today, [capacity, capacity, capacity], { gentle });
   const placed = new Set(weeks.flatMap((w) => w.tasks.map((t) => t.id)));
   const later = pending
     .filter((t) => t.active && !placed.has(t.id))

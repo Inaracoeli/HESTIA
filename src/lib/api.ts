@@ -15,12 +15,12 @@ export type UserSettings = {
   level: Level;
   theme: 'auto' | 'clair' | 'sombre';
   motion: boolean;
-  /** Style du nom, gardé sur l'appareil seulement (choix provisoire). */
-  brand?: 'capsule' | 'braise';
+  /** Rappel du week-end : actif, jour (0 = dimanche … 5 = vendredi), heure « HH:MM » (heure de Paris) */
+  reminder: { on: boolean; day: number; time: string };
 };
 export type Session = { userId: string; email: string | null };
 
-export const DEFAULT_SETTINGS: UserSettings = { capacity: 90, level: 'intermediaire', theme: 'auto', motion: true };
+export const DEFAULT_SETTINGS: UserSettings = { capacity: 90, level: 'intermediaire', theme: 'auto', motion: true, reminder: { on: false, day: 5, time: '12:00' } };
 
 function fail(error: { message: string } | null) {
   if (error) throw new Error(error.message);
@@ -117,7 +117,13 @@ export async function loadSettings(userId: string): Promise<UserSettings> {
   const { data, error } = await supabase.from('reglages').select('*').eq('user_id', userId).maybeSingle();
   fail(error);
   if (!data) return DEFAULT_SETTINGS;
-  return { capacity: data.capacite_min, level: data.niveau, theme: data.theme, motion: data.animations };
+  return {
+    capacity: data.capacite_min,
+    level: data.niveau,
+    theme: data.theme,
+    motion: data.animations,
+    reminder: { on: !!data.rappel_actif, day: data.rappel_jour ?? 5, time: data.rappel_heure ?? '12:00' },
+  };
 }
 
 export async function saveSettings(userId: string, s: UserSettings): Promise<void> {
@@ -127,6 +133,9 @@ export async function saveSettings(userId: string, s: UserSettings): Promise<voi
     niveau: s.level,
     theme: s.theme,
     animations: s.motion,
+    rappel_actif: s.reminder.on,
+    rappel_jour: s.reminder.day,
+    rappel_heure: s.reminder.time,
     updated_at: new Date().toISOString(),
   });
   fail(error);
@@ -352,10 +361,8 @@ export async function saveProfile(foyerId: string, tasks: Task[], previous: Prof
         difficulte: tpl.difficulty,
         pro: tpl.pro,
         outils: tpl.tools,
-        alternatives: tpl.alternatives,
-        questions: tpl.questions,
+        // Étapes, questions et solutions de remplacement viennent toujours du catalogue : rien à copier.
         choix: tpl.choicesFrom?.(next) ?? {},
-        etapes: tpl.steps,
         mois: tpl.months ?? null,
         derniere_fois: toISODate(last),
       };

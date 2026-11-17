@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { TabBar, type Tab } from './components/TabBar';
 import { CAPACITY_STEPS, weekStart } from './data/engine';
 import { toISODate, type Task } from './data/types';
@@ -32,20 +32,35 @@ import {
 } from './lib/api';
 import { ChoosePassword, Loading, Login, NoAccess } from './screens/Auth';
 import { Foyer } from './screens/Foyer';
-import { Esprit } from './screens/Esprit';
-import { Reglages } from './screens/Reglages';
 import { Guides } from './screens/Guides';
-import { MesTaches } from './screens/MesTaches';
-import { Carnet } from './screens/Carnet';
-import { Echeancier } from './screens/Echeancier';
-import { Profil } from './screens/Profil';
 import { Planning } from './screens/Planning';
 import { TaskSheet } from './screens/TaskSheet';
 import { Today } from './screens/Today';
 
+// Écrans secondaires : chargés seulement quand on les ouvre, pour un démarrage plus léger.
+const Esprit = lazy(() => import('./screens/Esprit').then((m) => ({ default: m.Esprit })));
+const Reglages = lazy(() => import('./screens/Reglages').then((m) => ({ default: m.Reglages })));
+const Tuto = lazy(() => import('./screens/Tuto').then((m) => ({ default: m.Tuto })));
+const MesTaches = lazy(() => import('./screens/MesTaches').then((m) => ({ default: m.MesTaches })));
+const Carnet = lazy(() => import('./screens/Carnet').then((m) => ({ default: m.Carnet })));
+const Echeancier = lazy(() => import('./screens/Echeancier').then((m) => ({ default: m.Echeancier })));
+const Profil = lazy(() => import('./screens/Profil').then((m) => ({ default: m.Profil })));
+import { gentleWeek } from './lib/douceur';
+
 // Lien d'invitation ou de mot de passe oublié : on le repère avant que Supabase ne nettoie l'adresse.
 const LINK_TYPE = /type=(invite|recovery)/.exec(window.location.hash)?.[1] as 'invite' | 'recovery' | undefined;
 const SETTINGS_CACHE = 'hestia.settings';
+const DATA_CACHE = 'hestia.donnees';
+
+/** Dernières données chargées, pour ouvrir l'app sans réseau. */
+function cachedData(userId: string): { foyer: FoyerT; tasks: Task[] } | null {
+  try {
+    const d = JSON.parse(localStorage.getItem(DATA_CACHE) ?? 'null');
+    return d?.userId === userId ? d : null;
+  } catch {
+    return null;
+  }
+}
 
 function cachedSettings(): UserSettings {
   try {
@@ -74,6 +89,7 @@ export function App() {
   const [journal, setJournal] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [tutoOpen, setTutoOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileLater, setProfileLater] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
@@ -82,6 +98,7 @@ export function App() {
   const [toastAction, setToastAction] = useState<{ label: string; run: () => void } | null>(null);
   const [error, setError] = useState('');
   const today = useMemo(() => new Date(), []);
+  const douceur = useMemo(() => gentleWeek(today), [today]);
   // Bilan de la semaine : les tâches se font surtout du jeudi au dimanche, donc on pose la question
   // une fois la semaine finie, du dimanche 18 h au mardi soir, sur la semaine qui vient de s'écouler.
   const feedbackWeek = useMemo(() => {
@@ -107,9 +124,17 @@ export function App() {
   }, []);
 
   /* Données du foyer */
+  const [offline, setOffline] = useState(false);
   const refresh = useCallback(async (f: FoyerT) => {
-    setTasks(await loadTasks(f.id, today));
-  }, [today]);
+    const t = await loadTasks(f.id, today);
+    setTasks(t);
+    setOffline(false);
+    try {
+      localStorage.setItem(DATA_CACHE, JSON.stringify({ userId: session?.userId, foyer: f, tasks: t }));
+    } catch {
+      /* stockage plein ou indisponible */
+    }
+  }, [today, session?.userId]);
 
   useEffect(() => {
     if (!session) return;
@@ -118,20 +143,47 @@ export function App() {
       try {
         const [f, s] = await Promise.all([loadFoyer(session.userId), loadSettings(session.userId)]);
         if (cancelled) return;
-        setSettings((prev) => ({ ...s, brand: prev.brand }));
+        setSettings(s);
         setFoyer(f);
         if (f) {
           await refresh(f);
           loadMembers(f.id).then(setMembers).catch(() => setMembers([]));
         }
       } catch (err) {
-        if (!cancelled) setError((err as Error).message);
+        if (cancelled) return;
+        // Sans réseau : on affiche les dernières données connues.
+        const cache = cachedData(session.userId);
+        if (cache && !navigator.onLine) {
+          setFoyer(cache.foyer);
+          setTasks(cache.tasks);
+          setOffline(true);
+        } else setError((err as Error).message);
       }
     })();
     return () => {
       cancelled = true;
     };
   }, [session, refresh]);
+
+  // Première visite, maison décrite : le tuto s'ouvre une fois.
+  useEffect(() => {
+    if (!foyer?.profile) return;
+    try {
+      if (localStorage.getItem('hestia.tuto')) return;
+      localStorage.setItem('hestia.tuto', '1');
+      setTutoOpen(true);
+    } catch {
+      /* stockage indisponible */
+    }
+  }, [foyer?.profile]);
+
+  // Retour du réseau : on recharge.
+  useEffect(() => {
+    if (!offline) return;
+    const back = () => location.reload();
+    window.addEventListener('online', back);
+    return () => window.removeEventListener('online', back);
+  }, [offline]);
 
   useEffect(() => {
     if (!session || !feedbackWeek) return;
@@ -161,7 +213,7 @@ export function App() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [tab, openId, schedule, manage, journal, profileOpen, settingsOpen, guideOpen]);
+  }, [tab, openId, schedule, manage, journal, profileOpen, settingsOpen, guideOpen, tutoOpen]);
 
   const changeSettings = (s: UserSettings) => {
     setSettings(s);
@@ -236,6 +288,12 @@ export function App() {
 
   return (
     <div className="app">
+      <Suspense fallback={null}>
+      {offline && (
+        <div className="notice" role="status" style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top) + 8px)', left: 12, right: 12, zIndex: 49, background: 'var(--chip-bg)', color: 'var(--ink)', boxShadow: 'var(--shadow)', maxWidth: 520, margin: '0 auto' }}>
+          Hors ligne : voici les dernières données connues. Les changements reprendront avec le réseau.
+        </div>
+      )}
       {error && (
         <div className="notice notice--error" role="alert" style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top) + 8px)', left: 12, right: 12, zIndex: 50 }} onClick={() => setError('')}>
           {error}
@@ -276,10 +334,12 @@ export function App() {
             return changes;
           }}
         />
+      ) : tutoOpen ? (
+        <Tuto onBack={() => setTutoOpen(false)} onOpenEsprit={() => { setTutoOpen(false); setGuideOpen(true); }} />
       ) : guideOpen ? (
-        <Esprit onBack={() => setGuideOpen(false)} />
+        <Esprit onBack={() => setGuideOpen(false)} onOpenTuto={() => { setGuideOpen(false); setTutoOpen(true); }} />
       ) : settingsOpen ? (
-        <Reglages email={session.email} settings={settings} dark={dark} onChange={changeSettings} onBack={() => setSettingsOpen(false)} onOpenGuide={() => setGuideOpen(true)} />
+        <Reglages userId={session.userId} email={session.email} settings={settings} dark={dark} onChange={changeSettings} onBack={() => setSettingsOpen(false)} onOpenGuide={() => setGuideOpen(true)} />
       ) : journal ? (
         <Carnet foyerId={foyer.id} members={members} onBack={() => setJournal(false)} onChanged={() => refresh(foyer)} />
       ) : open ? (
@@ -349,6 +409,7 @@ export function App() {
               tasks={tasks}
               today={today}
               capacity={settings.capacity}
+              douceur={douceur}
               onOpen={(t) => setOpenId(t.id)}
               feedbackWeek={feedbackWeek}
               feedbackGiven={feedback !== null}
@@ -360,6 +421,7 @@ export function App() {
               tasks={tasks}
               today={today}
               capacity={settings.capacity}
+              gentle={!!douceur}
               onOpen={(t) => setOpenId(t.id)}
               onSchedule={() => setSchedule(true)}
               onPlan={async (t, day) => {
@@ -374,9 +436,10 @@ export function App() {
           )}
           {tab === 'guides' && <Guides tasks={tasks} onOpen={(t) => setOpenId(t.id)} onOpenGuide={() => setGuideOpen(true)} />}
           {tab === 'foyer' && <Foyer foyer={foyer} taskCount={tasks.filter((t) => t.active).length} onOpenTasks={() => setManage(true)} onOpenProfile={() => setProfileOpen(true)} onOpenJournal={() => setJournal(true)} onOpenSettings={() => setSettingsOpen(true)} onOpenGuide={() => setGuideOpen(true)} />}
-          <TabBar current={tab} onChange={setTab} />
+          <TabBar current={tab} onChange={setTab} onHelp={() => setTutoOpen(true)} />
         </>
       )}
+      </Suspense>
     </div>
   );
 }

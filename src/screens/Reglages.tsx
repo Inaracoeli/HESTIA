@@ -3,8 +3,9 @@ import { Topbar } from '../components/Pinned';
 import { useSwipeBack } from '../components/useSwipeBack';
 import { CAPACITY_STEPS, formatMinutes } from '../data/engine';
 import type { Level } from '../data/types';
-import { useState, type FormEvent } from 'react';
+import { useState, type CSSProperties, type FormEvent } from 'react';
 import { setPassword, signOut, type UserSettings } from '../lib/api';
+import { pushState, subscribePush, testPush } from '../lib/push';
 
 const STEPS_MIN = CAPACITY_STEPS;
 const LEVELS: { id: Level; name: string; note: string }[] = [
@@ -25,6 +26,7 @@ function Switch({ label, on, onChange }: { label: string; on: boolean; onChange:
 }
 
 type Props = {
+  userId: string;
   email: string | null;
   settings: UserSettings;
   dark: boolean;
@@ -34,7 +36,7 @@ type Props = {
 };
 
 /** Réglages personnels : rythme, niveau, apparence, compte. */
-export function Reglages({ email, settings, dark, onChange, onBack, onOpenGuide }: Props) {
+export function Reglages({ userId, email, settings, dark, onChange, onBack, onOpenGuide }: Props) {
   const swipe = useSwipeBack(onBack);
   const idx = Math.max(0, STEPS_MIN.indexOf(settings.capacity));
   const set = (patch: Partial<UserSettings>) => onChange({ ...settings, ...patch });
@@ -74,8 +76,10 @@ export function Reglages({ email, settings, dark, onChange, onBack, onOpenGuide 
               <IconPlus size={20} />
             </button>
           </div>
-          <span className="meta" style={{ fontSize: 13, textAlign: 'center', lineHeight: 1.4 }}>Les tâches essentielles passent toujours.</span>
+          <span className="meta" style={{ fontSize: 13, textAlign: 'center', lineHeight: 1.4 }}>Jamais plus de 5 tâches par semaine ; les essentielles passent en priorité.</span>
         </section>
+
+        <Rappel userId={userId} value={settings.reminder} onChange={(reminder) => set({ reminder })} />
 
         <section className="card" style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -154,5 +158,87 @@ function PasswordForm() {
       <button className="btn-secondary" type="submit" disabled={busy}>{busy ? 'Enregistrement…' : 'Changer mon mot de passe'}</button>
       {msg && <div className={`notice ${msg.ok ? 'notice--ok' : 'notice--error'}`} role="status">{msg.text}</div>}
     </form>
+  );
+}
+
+const JOURS = [
+  { v: 4, l: 'Jeudi' },
+  { v: 5, l: 'Vendredi' },
+  { v: 6, l: 'Samedi' },
+  { v: 0, l: 'Dimanche' },
+];
+const HEURES = ['08:00', '12:00', '18:00', '20:00'];
+
+/** Rappel du week-end : 2 ou 3 tâches rapides à recopier sur l'ardoise. */
+function Rappel({ userId, value, onChange }: { userId: string; value: UserSettings['reminder']; onChange: (v: UserSettings['reminder']) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const state = pushState();
+  const run = async (f: () => Promise<void>) => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      await f();
+    } catch (err) {
+      setMsg({ ok: false, text: (err as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const toggle = (on: boolean) =>
+    run(async () => {
+      if (on) await subscribePush(userId);
+      onChange({ ...value, on });
+    });
+  const chip = (on: boolean): CSSProperties => ({
+    minHeight: 40, padding: '0 12px', borderRadius: 12, fontSize: 14, fontWeight: on ? 700 : 500,
+    border: on ? '2px solid var(--gold-2)' : '1px solid var(--line)', background: on ? 'var(--chip-bg)' : 'var(--card)', color: 'var(--ink)',
+  });
+  return (
+    <section className="card" style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <h2 className="title-2" style={{ fontSize: 17 }}>Rappel du week-end</h2>
+      <p className="meta" style={{ margin: 0, fontSize: 13, lineHeight: 1.45 }}>
+        Une notification avec 2 ou 3 petites choses à faire, à recopier sur l’ardoise de la maison. Rien d’autre.
+      </p>
+      {state === 'installer' ? (
+        <div className="notice" style={{ background: 'var(--chip-bg)', color: 'var(--ink)' }}>
+          Sur iPhone, ajoutez d’abord Hestia à l’écran d’accueil : dans Safari, touchez Partager puis « Sur l’écran d’accueil ». Ouvrez Hestia depuis cette icône et revenez ici.
+        </div>
+      ) : state === 'non' ? (
+        <div className="notice" style={{ background: 'var(--chip-bg)', color: 'var(--ink)' }}>Ce navigateur ne permet pas les notifications.</div>
+      ) : (
+        <>
+          <Switch label="Recevoir le rappel" on={value.on} onChange={(v) => !busy && toggle(v)} />
+          {value.on && (
+            <>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {JOURS.map((j) => (
+                  <button key={j.v} style={chip(value.day === j.v)} aria-pressed={value.day === j.v} onClick={() => onChange({ ...value, day: j.v })}>{j.l}</button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                {HEURES.map((h) => (
+                  <button key={h} style={chip(value.time === h)} aria-pressed={value.time === h} onClick={() => onChange({ ...value, time: h })}>{h.replace(':00', ' h')}</button>
+                ))}
+                <input
+                  type="time"
+                  aria-label="Autre heure"
+                  value={value.time}
+                  onChange={(e) => /^\d\d:\d\d$/.test(e.target.value) && onChange({ ...value, time: e.target.value })}
+                  style={{ ...chip(!HEURES.includes(value.time)), fontFamily: 'inherit' }}
+                />
+              </div>
+              <button className="btn-secondary" disabled={busy} onClick={() => run(async () => {
+                const n = await testPush();
+                setMsg({ ok: n > 0, text: n > 0 ? 'Rappel envoyé : regardez vos notifications.' : 'Aucun appareil abonné : désactivez puis réactivez le rappel.' });
+              })}>
+                {busy ? 'Un instant…' : 'Recevoir un essai maintenant'}
+              </button>
+            </>
+          )}
+        </>
+      )}
+      {msg && <div className={`notice ${msg.ok ? 'notice--ok' : 'notice--error'}`} role="status">{msg.text}</div>}
+    </section>
   );
 }
