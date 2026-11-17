@@ -110,7 +110,7 @@ export function Echeancier({ tasks, today, onBack, onOpen, onToggleFollow }: Pro
               >
                 <span style={{ width: 108, flexShrink: 0, fontSize: 13, fontWeight: 600, lineHeight: 1.15 }}>
                   {task.inSchedule && task.importance > 2 && (
-                    <span style={{ color: 'var(--gold-2)', marginRight: 3, verticalAlign: '-2px', display: 'inline-flex' }}><IconStar size={13} filled /></span>
+                    <span className="star-on" style={{ marginRight: 3, verticalAlign: '-2px', display: 'inline-flex' }}><IconStar size={13} filled /></span>
                   )}
                   {task.title}
                 </span>
@@ -180,7 +180,7 @@ export function Echeancier({ tasks, today, onBack, onOpen, onToggleFollow }: Pro
                 >
                   <span className="dot" style={{ background: DOMAIN_COLOR[t.domain] }} />
                   <span className="task-row__text"><span className="task-row__title" style={{ fontSize: 15 }}>{t.title}</span></span>
-                  <span style={{ color: t.inSchedule ? 'var(--gold-2)' : 'var(--ink-soft)', display: 'flex' }}>
+                  <span className={t.inSchedule ? 'star-on' : undefined} style={{ color: t.inSchedule ? undefined : 'var(--ink-soft)', display: 'flex' }}>
                     <IconStar size={24} filled={t.inSchedule} />
                   </span>
                 </button>

@@ -118,7 +118,7 @@ export function Esprit({ onBack, onOpenTuto }: { onBack: () => void; onOpenTuto:
               L'<strong>Échéancier</strong>, dans le Planning, montre les grands rendez-vous des douze prochains mois. Une tâche vous tient à cœur ?
             </p>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ color: 'var(--gold-2)', display: 'flex' }}><IconStar size={18} filled /></span> Étoilez-la pour la suivre.
+              <span className="star-on" style={{ display: 'flex' }}><IconStar size={18} filled /></span> Étoilez-la pour la suivre.
             </span>
           </Point>
 

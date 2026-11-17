@@ -74,12 +74,12 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
         </button>
         <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: 0.4 }}>{DOMAIN_LABEL[task.domain]}</span>
         <button
-          className="icon-btn"
+          className="icon-btn star-btn"
           aria-pressed={followed}
           aria-label={automatic ? 'Suivie d’office dans l’échéancier' : followed ? 'Ne plus suivre dans l’échéancier' : 'Suivre dans l’échéancier'}
           title={automatic ? 'Tâche importante : toujours dans l’échéancier' : undefined}
           onClick={automatic ? undefined : onToggleFollow}
-          style={{ color: followed ? '#FFE08A' : 'inherit', opacity: automatic ? 0.75 : 1 }}
+          style={{ opacity: automatic ? 0.8 : 1 }}
         >
           <IconStar size={22} filled={followed} />
         </button>
