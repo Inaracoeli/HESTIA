@@ -87,3 +87,20 @@ export function toISODate(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
+
+/** Lien externe (source ou vidéo). */
+export type Link = { l: string; url: string };
+
+/** Contenu enrichi d'une fiche du catalogue. */
+export type Guide = {
+  /** Pourquoi et comment ça marche, pour tous les niveaux */
+  comprendre: string;
+  /** Détails techniques pour aller plus loin */
+  expert?: string[];
+  /** Erreurs fréquentes */
+  pieges?: string[];
+  /** Ce que dit la réglementation */
+  regle?: string;
+  sources?: Link[];
+  videos?: Link[];
+};

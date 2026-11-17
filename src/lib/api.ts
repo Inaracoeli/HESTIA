@@ -1,7 +1,10 @@
 // Accès aux données Hestia (Supabase). Tous les écrans passent par ce fichier.
 import { supabase } from './supabase';
 import type { Level, Task } from '../data/types';
-import { CATALOGUE_IDS, templatesFor, type Profile, type Template } from '../data/catalogue';
+import { CATALOGUE, CATALOGUE_IDS, templatesFor, type Profile, type Template } from '../data/catalogue';
+
+/** Modèles du catalogue par identifiant : les fiches suivent toujours la dernière version du catalogue. */
+const TEMPLATE_BY_ID = new Map(CATALOGUE.map((c) => [c.template.id, c.template]));
 import { periodLabelFor, toISODate } from '../data/types';
 
 export type Role = 'admin' | 'membre';
@@ -159,6 +162,7 @@ function toTask(r: TaskRow, today: Date): Task {
   const plan = Array.isArray(r.planifications) ? r.planifications[0] : r.planifications;
   // Sans date connue, on considère que la tâche est à faire maintenant.
   const fallback = toISODate(new Date(today.getTime() - r.intervalle_jours * 86400000));
+  const tpl = r.modele ? TEMPLATE_BY_ID.get(r.modele) : undefined;
   return {
     id: r.id,
     title: r.titre,
@@ -172,9 +176,9 @@ function toTask(r: TaskRow, today: Date): Task {
     pro: r.pro,
     active: r.actif,
     tools: r.outils ?? [],
-    alternatives: r.alternatives ?? {},
-    steps: { debutant: r.etapes?.debutant ?? [], intermediaire: r.etapes?.intermediaire ?? [], expert: r.etapes?.expert ?? [] },
-    questions: r.questions ?? [],
+    alternatives: tpl?.alternatives ?? r.alternatives ?? {},
+    steps: tpl?.steps ?? { debutant: r.etapes?.debutant ?? [], intermediaire: r.etapes?.intermediaire ?? [], expert: r.etapes?.expert ?? [] },
+    questions: tpl?.questions ?? r.questions ?? [],
     choices: r.choix ?? {},
     lastDone: r.derniere_fois ?? fallback,
     custom: !r.modele,

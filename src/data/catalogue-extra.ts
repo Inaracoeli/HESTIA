@@ -203,13 +203,13 @@ export const CATALOGUE_EXTRA: { template: Template; when: (p: Profile) => boolea
       d: [
         'Retirez d’abord le bois mort, les branches cassées et celles qui se croisent.',
         'Fruitiers à pépins (pommier, poirier) : taille en fin d’hiver, hors période de gel.',
-        'Fruitiers à noyau (cerisier, prunier) : plutôt après la récolte, en été.',
+        'Fruitiers à noyau (cerisier, prunier) : taille légère après la récolte, à partir de mi-août (pas de taille de mi-mars à mi-août, période de nidification).',
         'Coupez net, juste au-dessus d’un bourgeon tourné vers l’extérieur.',
         'Au-delà de ce que vous atteignez depuis le sol, faites appel à un élagueur.',
       ],
-      i: ['Bois mort et branches croisées d’abord.', 'Pépins en fin d’hiver, noyau après récolte.', 'Coupe nette au-dessus d’un bourgeon ; élagueur si en hauteur.'],
+      i: ['Bois mort et branches croisées d’abord.', 'Pépins en hiver hors gel, noyau à partir de mi-août.', 'Coupe nette au-dessus d’un bourgeon ; élagueur si en hauteur.'],
       e: ['Taille selon l’espèce.'],
-    }, { months: [1, 2, 3, 7, 8], difficulty: 2, tools: ['Sécateur', 'Scie d’élagage'] }),
+    }, { months: [9, 11, 12, 1, 2, 3], difficulty: 2, tools: ['Sécateur', 'Scie d’élagage'] }),
   },
   {
     when: (p) => house(p) && has(p.exterieur, 'pelouse'),

@@ -109,7 +109,7 @@ export const CATALOGUE: { template: Template; when: (p: Profile) => boolean }[] 
     when: () => true,
     template: t({
       id: 'differentiel', title: 'Tester les interrupteurs différentiels', domain: 'maison', importance: 2,
-      intervalDays: 180, periodLabel: 'Tous les 6 mois', minutes: 5, budget: 0, difficulty: 1, pro: false,
+      intervalDays: 30, periodLabel: 'Tous les mois', minutes: 5, budget: 0, difficulty: 1, pro: false,
       steps: {
         debutant: [
           'Ouvrez le tableau électrique et repérez les interrupteurs différentiels : ils portent un petit bouton « T » ou « Test ».',

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useSwipeBack } from '../components/useSwipeBack';
 import { IconCheck, IconChevronLeft, IconStar } from '../components/Icons';
 import { Topbar } from '../components/Pinned';
+import { Comprendre, Liens, PlusLoin } from '../components/GuideBlocks';
+import { guideFor } from '../data/guides';
 import { dueDate, formatMinutes } from '../data/engine';
 import { DOMAIN_LABEL, resolveSteps, type Level, type Task } from '../data/types';
 
@@ -36,6 +38,7 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
   const followed = automatic || task.inSchedule;
   const [choices, setChoices] = useState<Record<string, string>>(task.choices);
   const steps = resolveSteps(task, level, choices);
+  const guide = guideFor(task.templateId);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const swipe = useSwipeBack(onBack);
@@ -116,6 +119,8 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
             </div>
           </div>
 
+          <Comprendre guide={guide} />
+
           {task.questions.length > 0 && (
             <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <h2 className="title-2">Votre cas</h2>
@@ -175,6 +180,8 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--link)' }}>Détail adapté à votre niveau : {LEVEL_LABEL[level]}</span>
           </section>
 
+          <PlusLoin guide={guide} level={level} />
+
           {task.tools.length > 0 && (
             <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <h2 className="title-2">Il vous faut</h2>
@@ -212,6 +219,8 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
               </div>
             </section>
           )}
+
+          <Liens guide={guide} />
 
           {doneThisWeek && (
             <div className="notice notice--ok" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

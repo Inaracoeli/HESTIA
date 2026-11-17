@@ -277,9 +277,9 @@
   "title": "Tester les détecteurs de fumée",
   "domain": "maison",
   "importance": 1,
-  "intervalDays": 180,
-  "periodLabel": "Tous les 6 mois",
-  "minutes": 10,
+  "intervalDays": 30,
+  "periodLabel": "Tous les mois",
+  "minutes": 5,
   "budget": 0,
   "difficulty": 1,
   "pro": false,
@@ -315,7 +315,7 @@
   "domain": "exterieur",
   "importance": 4,
   "intervalDays": 180,
-  "periodLabel": "Deux fois par an",
+  "periodLabel": "Deux fois par an, hors nidification",
   "minutes": 60,
   "budget": 0,
   "difficulty": 2,
@@ -374,9 +374,9 @@
   ],
   "steps": {
    "debutant": [
-    "Vérifiez qu’aucun oiseau ne niche dans la haie : de mi-mars à fin juillet, mieux vaut ne pas tailler.",
+    "Vérifiez qu’aucun oiseau ne niche dans la haie : de mi-mars à mi-août, l’Office français de la biodiversité recommande de ne pas tailler.",
     {
-     "t": "Taillez juste après la floraison : plus tard, vous couperiez les boutons des fleurs de l’an prochain.",
+     "t": "Haie fleurie : l’idéal pour les fleurs est de tailler juste après la floraison, mais c’est en pleine nidification. Inspectez la haie avant, ou attendez fin août quitte à perdre un peu de floraison.",
      "si": {
       "type": [
        "fleurie"
@@ -496,7 +496,13 @@
      }
     }
    ]
-  }
+  },
+  "months": [
+   2,
+   3,
+   9,
+   10
+  ]
  },
  "essuie-glaces": {
   "id": "essuie-glaces",
