@@ -10,7 +10,7 @@ const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
   { id: 'foyer', label: 'Foyer', icon: <IconHouse /> },
 ];
 
-export function TabBar({ current, onChange, onHelp }: { current: Tab; onChange: (t: Tab) => void; onHelp: () => void }) {
+export function TabBar({ current, onChange }: { current: Tab; onChange: (t: Tab) => void }) {
   return (
     <nav className="tabbar" aria-label="Navigation principale">
       {TABS.map((t) => (
@@ -19,10 +19,6 @@ export function TabBar({ current, onChange, onHelp }: { current: Tab; onChange: 
           {t.label}
         </button>
       ))}
-      <button className="tab tab--help" aria-label="Aide : bien démarrer" onClick={onHelp}>
-        <span aria-hidden="true" style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>?</span>
-        Aide
-      </button>
     </nav>
   );
 }

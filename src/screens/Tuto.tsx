@@ -57,7 +57,7 @@ const STEPS: Step[] = [
   },
   {
     icon: <IconGear size={26} />, where: 'Foyer › Réglages', title: 'À votre mesure',
-    text: 'Temps par semaine, niveau de bricolage, thème sombre, mot de passe. Et ce tuto reste accessible depuis le bouton « ? » en bas de l’écran.',
+    text: 'Temps par semaine, niveau de bricolage, thème sombre, mot de passe. Et ce tuto reste accessible depuis la pastille « ? Aide » en haut de l’onglet Semaine.',
     tip: 'Glissez vers la droite pour revenir en arrière, partout.',
   },
 ];
@@ -85,7 +85,7 @@ export function Tuto({ onBack, onOpenEsprit }: { onBack: () => void; onOpenEspri
             ))}
           </div>
         </header>
-        <div className="content" style={{ gap: 14 }}>
+        <div className="content" style={{ gap: 14, paddingBottom: 'calc(env(safe-area-inset-bottom) + 150px)' }}>
           <section className="card card--raised" style={{ padding: '22px 18px', display: 'flex', flexDirection: 'column', gap: 12, minHeight: 300 }}>
             <span aria-hidden="true" style={{ width: 52, height: 52, borderRadius: 16, background: 'var(--gold)', color: 'var(--on-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {s.icon}
@@ -97,17 +97,28 @@ export function Tuto({ onBack, onOpenEsprit }: { onBack: () => void; onOpenEspri
               <div className="notice" style={{ background: 'var(--chip-bg)', color: 'var(--ink)', fontSize: 14 }}>{s.tip}</div>
             )}
           </section>
-          <div style={{ display: 'flex', gap: 10 }}>
-            {i > 0 && <button className="btn-secondary" onClick={() => setI(i - 1)}>Précédent</button>}
-            {last ? (
-              <button className="btn-gold" style={{ flexGrow: 1 }} onClick={onBack}>C’est parti</button>
-            ) : (
-              <button className="btn-gold" style={{ flexGrow: 1 }} onClick={() => setI(i + 1)}>Suivant</button>
-            )}
-          </div>
-          {!last && <button className="btn-link" onClick={onBack}>Passer le tuto</button>}
-          {last && <button className="btn-link" onClick={onOpenEsprit}>Lire l’esprit Hestia, en deux minutes</button>}
         </div>
+      </div>
+
+      {/* Boutons fixes en bas : ils ne bougent pas d'une étape à l'autre. */}
+      <div
+        style={{
+          position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 30, maxWidth: 560, margin: '0 auto',
+          padding: '14px 16px calc(env(safe-area-inset-bottom) + 10px)', display: 'flex', flexDirection: 'column', gap: 4,
+          background: 'var(--veil)', WebkitBackdropFilter: 'blur(18px)', backdropFilter: 'blur(18px)',
+        }}
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10 }}>
+          <button className="btn-secondary" onClick={() => setI(i - 1)} disabled={i === 0} style={{ visibility: i === 0 ? 'hidden' : 'visible' }}>
+            Précédent
+          </button>
+          <button className="btn-gold" onClick={() => (last ? onBack() : setI(i + 1))}>{last ? 'C’est parti' : 'Suivant'}</button>
+        </div>
+        {last ? (
+          <button className="btn-link" onClick={onOpenEsprit}>Lire l’esprit Hestia, en deux minutes</button>
+        ) : (
+          <button className="btn-link" onClick={onBack}>Passer le tuto</button>
+        )}
       </div>
     </div>
   );

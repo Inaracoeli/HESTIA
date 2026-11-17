@@ -17,6 +17,7 @@ type Props = {
   today: Date;
   capacity: number;
   douceur: Douceur;
+  onHelp: () => void;
   onOpen: (t: Task) => void;
   /** Semaine concernée par la question de fin de semaine, ou null si ce n'est pas le moment */
   feedbackWeek: string | null;
@@ -24,7 +25,7 @@ type Props = {
   onFeedback: (avis: 'trop' | 'bien' | 'pas_assez') => void;
 };
 
-export function Today({ tasks, today, capacity, douceur, onOpen, feedbackWeek, feedbackGiven, onFeedback }: Props) {
+export function Today({ tasks, today, capacity, douceur, onHelp, onOpen, feedbackWeek, feedbackGiven, onFeedback }: Props) {
   const monday = toISODate(weekStart(today));
   const todayISO = toISODate(today);
   // Faites cette semaine : elles restent affichées, cochées.
@@ -59,7 +60,16 @@ export function Today({ tasks, today, capacity, douceur, onOpen, feedbackWeek, f
     <div className="screen">
       <Topbar>
         <Wordmark size={26} />
-        <span className="num" style={{ fontSize: 13, fontWeight: 700 }}>{DATE_FMT.format(today)}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="num" style={{ fontSize: 13, fontWeight: 700 }}>{DATE_FMT.format(today)}</span>
+          <button
+            onClick={onHelp}
+            aria-label="Aide : bien démarrer"
+            style={{ minWidth: 44, height: 32, padding: '0 10px', border: 0, borderRadius: 999, background: 'rgba(36, 30, 25, 0.14)', color: 'var(--on-gold)', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+          >
+            ? <span style={{ fontWeight: 700 }}>Aide</span>
+          </button>
+        </span>
       </Topbar>
       <header className="header">
         <div className="separator" aria-hidden="true" />

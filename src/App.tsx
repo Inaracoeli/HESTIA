@@ -410,6 +410,7 @@ export function App() {
               today={today}
               capacity={settings.capacity}
               douceur={douceur}
+              onHelp={() => setTutoOpen(true)}
               onOpen={(t) => setOpenId(t.id)}
               feedbackWeek={feedbackWeek}
               feedbackGiven={feedback !== null}
@@ -436,7 +437,7 @@ export function App() {
           )}
           {tab === 'guides' && <Guides tasks={tasks} onOpen={(t) => setOpenId(t.id)} onOpenGuide={() => setGuideOpen(true)} />}
           {tab === 'foyer' && <Foyer foyer={foyer} taskCount={tasks.filter((t) => t.active).length} onOpenTasks={() => setManage(true)} onOpenProfile={() => setProfileOpen(true)} onOpenJournal={() => setJournal(true)} onOpenSettings={() => setSettingsOpen(true)} onOpenGuide={() => setGuideOpen(true)} />}
-          <TabBar current={tab} onChange={setTab} onHelp={() => setTutoOpen(true)} />
+          <TabBar current={tab} onChange={setTab} />
         </>
       )}
       </Suspense>
