@@ -64,7 +64,7 @@ export function Today({ tasks, today, capacity, douceur, onHelp, onOpen, feedbac
           <button
             onClick={onHelp}
             aria-label="Aide : bien démarrer"
-            style={{ minWidth: 44, height: 30, padding: '0 10px', border: 0, borderRadius: 999, background: 'rgba(36, 30, 25, 0.14)', color: 'var(--on-gold)', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+            style={{ minWidth: 44, height: 30, padding: '0 10px', border: 0, borderRadius: 999, background: 'var(--pill-bg)', color: 'var(--header-ink)', boxShadow: 'var(--pill-glow)', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
           >
             ? <span style={{ fontWeight: 700 }}>Aide</span>
           </button>

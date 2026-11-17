@@ -115,7 +115,7 @@ export function Profil({ initial, tasks, firstTime, onCancel, onSave }: Props) {
       <div className="screen" style={{ paddingBottom: 24 }}>
         <header className="header" style={{ paddingBottom: 62 }}>
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))`, gap: 4 }} aria-hidden="true">
-            {steps.map((_, i) => <span key={i} style={{ height: 5, borderRadius: 3, background: i <= index ? 'var(--on-gold)' : 'rgba(36,30,25,0.18)' }} />)}
+            {steps.map((_, i) => <span key={i} style={{ height: 5, borderRadius: 3, background: i <= index ? 'var(--progress-on)' : 'var(--progress-off)' }} />)}
           </div>
           <span className="header__sub">{summary ? 'Voici ce que Hestia va faire.' : step.hint}</span>
         </header>

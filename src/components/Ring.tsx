@@ -5,7 +5,7 @@ const CIRC = 2 * Math.PI * 11;
 export function Ring({ progress, color, size = 36 }: { progress: number; color: string; size?: number }) {
   const filled = Math.max(0.04, Math.min(1, progress)) * CIRC;
   return (
-    <svg width={size} height={size} viewBox="0 0 28 28" aria-hidden="true" style={{ flexShrink: 0 }}>
+    <svg className="ring" width={size} height={size} viewBox="0 0 28 28" aria-hidden="true" style={{ flexShrink: 0, color }}>
       <circle cx="14" cy="14" r="11" fill="none" stroke="var(--ring-track)" strokeWidth="4" />
       <circle
         cx="14"

@@ -81,7 +81,7 @@ export function Tuto({ onBack, onOpenEsprit }: { onBack: () => void; onOpenEspri
         <header className="header" style={{ paddingBottom: 62 }}>
           <div role="progressbar" aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={i + 1} style={{ display: 'flex', gap: 4 }}>
             {STEPS.map((_, k) => (
-              <span key={k} style={{ flexGrow: 1, height: 5, borderRadius: 3, background: k <= i ? 'var(--on-gold)' : 'rgba(36, 30, 25, 0.18)' }} />
+              <span key={k} style={{ flexGrow: 1, height: 5, borderRadius: 3, background: k <= i ? 'var(--progress-on)' : 'var(--progress-off)', boxShadow: k <= i ? 'var(--progress-glow)' : 'none' }} />
             ))}
           </div>
         </header>
