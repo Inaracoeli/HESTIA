@@ -1,6 +1,7 @@
 // Accès aux données Hestia (Supabase). Tous les écrans passent par ce fichier.
 import { supabase } from './supabase';
 import type { Level, Task } from '../data/types';
+import type { Douceur, VisitState } from '../data/douceur';
 import { CATALOGUE, CATALOGUE_IDS, templatesFor, type Profile, type Template } from '../data/catalogue';
 
 /** Modèles du catalogue par identifiant : les fiches suivent toujours la dernière version du catalogue. */
@@ -8,7 +9,7 @@ const TEMPLATE_BY_ID = new Map(CATALOGUE.map((c) => [c.template.id, c.template])
 import { periodLabelFor, toISODate } from '../data/types';
 
 export type Role = 'admin' | 'membre';
-export type Foyer = { id: string; nom: string; description: string | null; materielAbsent: string[]; role: Role; profile: Profile | null };
+export type Foyer = { id: string; nom: string; description: string | null; materielAbsent: string[]; role: Role; profile: Profile | null; visit: VisitState };
 export type Member = { userId: string; email: string | null; role: Role };
 export type UserSettings = {
   capacity: number;
@@ -65,12 +66,18 @@ export async function signOut(): Promise<void> {
 export async function loadFoyer(userId: string): Promise<Foyer | null> {
   const { data, error } = await supabase
     .from('membres')
-    .select('role, foyers(id, nom, description, materiel_absent, profil)')
+    .select('role, foyers(id, nom, description, materiel_absent, profil, derniere_visite, douceur_semaine, douceur_type)')
     .eq('user_id', userId)
     .order('created_at')
     .limit(1);
   fail(error);
-  const row = data?.[0] as unknown as { role: Role; foyers: { id: string; nom: string; description: string | null; materiel_absent: string[] | null; profil: Profile | null } } | undefined;
+  const row = data?.[0] as unknown as {
+    role: Role;
+    foyers: {
+      id: string; nom: string; description: string | null; materiel_absent: string[] | null; profil: Profile | null;
+      derniere_visite: string | null; douceur_semaine: string | null; douceur_type: Douceur;
+    };
+  } | undefined;
   if (!row?.foyers) return null;
   return {
     id: row.foyers.id,
@@ -79,6 +86,7 @@ export async function loadFoyer(userId: string): Promise<Foyer | null> {
     materielAbsent: row.foyers.materiel_absent ?? [],
     role: row.role,
     profile: row.foyers.profil,
+    visit: { lastVisit: row.foyers.derniere_visite, gentleWeek: row.foyers.douceur_semaine, gentleKind: row.foyers.douceur_type },
   };
 }
 
@@ -109,6 +117,12 @@ export async function inviteMember(foyerId: string, email: string, password: str
     throw new Error(message);
   }
   return (data as { statut: 'cree' | 'ajoute' }).statut;
+}
+
+/** Note la visite du foyer (et la semaine de reprise en cours, s'il y en a une). */
+export async function recordVisit(foyerId: string, day: string, week: string | null, kind: Douceur): Promise<void> {
+  const { error } = await supabase.rpc('enregistrer_visite', { f: foyerId, visite: day, semaine: week, type: kind });
+  fail(error);
 }
 
 /* ---------- Réglages ---------- */

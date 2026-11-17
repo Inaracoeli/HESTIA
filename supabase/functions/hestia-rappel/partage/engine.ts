@@ -1,4 +1,4 @@
-// Copie de src/data/engine.ts pour la fonction hestia-rappel (mêmes règles que l’app).
+// Fichier généré depuis src/data/engine.ts par scripts/sync-fonctions.mjs : ne pas modifier ici.
 // Moteur de priorité : décide quelles tâches proposer chaque semaine.
 //
 // 1. Urgence = temps écoulé depuis la dernière fois ÷ intervalle prévu

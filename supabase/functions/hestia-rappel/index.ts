@@ -5,12 +5,14 @@
  * - POST par la tâche planifiée (en-tête x-rappel), toutes les 15 minutes : envoie les rappels dus
  *   (bon jour, heure atteinte depuis moins de 3 h, pas encore envoyé ce jour-là).
  *
- * engine.ts et types.ts sont des copies de src/data (mêmes règles que l'app), ajoutées au déploiement.
+ * Les règles (priorités, reprise en douceur, message) viennent de src/data, copiées dans ./partage
+ * par scripts/sync-fonctions.mjs : la notification propose exactement ce que propose l'app.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4';
 import webpush from 'npm:web-push@3.6.7';
-import { planWeeks, weekendPicks, weekStart, formatMinutes } from './engine.ts';
-import { toISODate, type Task } from './types.ts';
+import { gentleState, type Douceur } from './partage/douceur.ts';
+import { weekendMessage } from './partage/rappel.ts';
+import { toISODate, type Task } from './partage/types.ts';
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { db: { schema: 'hestia' } });
 const CORS = {
@@ -68,29 +70,26 @@ type Ligne = {
 
 /** Le message : les 2 ou 3 tâches rapides de la semaine, calculées comme dans l'app. */
 async function message(userId: string, capacite: number, aujourdhui: Date): Promise<{ titre: string; corps: string; url: string } | null> {
-  const { data: m } = await admin.from('membres').select('foyer_id').eq('user_id', userId).limit(1);
-  const foyerId = (m ?? [])[0]?.foyer_id;
-  if (!foyerId) return null;
+  const { data: m } = await admin
+    .from('membres')
+    .select('foyers(id, derniere_visite, douceur_semaine, douceur_type)')
+    .eq('user_id', userId)
+    .order('created_at')
+    .limit(1);
+  const foyer = (m ?? [])[0]?.foyers as unknown as { id: string; derniere_visite: string | null; douceur_semaine: string | null; douceur_type: Douceur } | undefined;
+  if (!foyer) return null;
   const { data } = await admin
     .from('taches')
     .select('id, titre, importance, intervalle_jours, minutes, derniere_fois, actif, mois, planifications(jour)')
-    .eq('foyer_id', foyerId);
-  const lundi = toISODate(weekStart(aujourdhui));
+    .eq('foyer_id', foyer.id);
   const taches = ((data ?? []) as Ligne[]).map((r) => ({
     id: r.id, title: r.titre, importance: r.importance, intervalDays: r.intervalle_jours, minutes: r.minutes, active: r.actif,
     months: r.mois ?? [], plannedDay: r.planifications?.[0]?.jour,
     lastDone: r.derniere_fois ?? toISODate(new Date(aujourdhui.getTime() - r.intervalle_jours * 86400000)),
   })) as unknown as Task[];
-  const restantes = taches.filter((t) => !(t.lastDone >= lundi));
-  const [semaine] = planWeeks(restantes, aujourdhui, [capacite]);
-  const choix = weekendPicks(semaine.tasks, 3);
-  if (choix.length === 0) return { titre: 'Hestia', corps: 'Rien d’urgent ce week-end. Profitez-en.', url: '/' };
-  const total = choix.reduce((s, t) => s + t.minutes, 0);
-  return {
-    titre: choix.length > 1 ? `Ce week-end, ${choix.length} petites choses (${formatMinutes(total)})` : `Ce week-end, une petite chose (${formatMinutes(total)})`,
-    corps: choix.map((t) => `• ${t.title} (${formatMinutes(t.minutes)})`).join('\n'),
-    url: '/',
-  };
+  // Même reprise en douceur que l'app, pour tout le foyer (le rappel ne compte pas comme une visite).
+  const { kind } = gentleState(aujourdhui, { lastVisit: foyer.derniere_visite, gentleWeek: foyer.douceur_semaine, gentleKind: foyer.douceur_type });
+  return { ...weekendMessage(taches, aujourdhui, capacite, kind), url: '/' };
 }
 
 type Reglage = { user_id: string; capacite_min: number; rappel_jour: number; rappel_heure: string; rappel_envoye_le: string | null };

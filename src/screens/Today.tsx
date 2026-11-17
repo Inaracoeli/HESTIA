@@ -4,7 +4,7 @@ import { IconCheck, IconChevronRight, IconPlus } from '../components/Icons';
 import { Topbar } from '../components/Pinned';
 import { Ring } from '../components/Ring';
 import { dueDate, formatMinutes, nextExtraTask, planWeeks, urgency, weekStart } from '../data/engine';
-import type { Douceur } from '../lib/douceur';
+import type { Douceur } from '../data/douceur';
 import { DOMAIN_COLOR, DOMAIN_LABEL, toISODate, type Task } from '../data/types';
 
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });

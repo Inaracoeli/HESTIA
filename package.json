@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p .",
     "test": "node scripts/test.mjs",
-    "verif": "npm run typecheck && npm test"
+    "verif": "npm run typecheck && npm test && node scripts/sync-fonctions.mjs --check",
+    "sync-fonctions": "node scripts/sync-fonctions.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0",

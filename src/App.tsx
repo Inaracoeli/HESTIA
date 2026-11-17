@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TabBar, type Tab } from './components/TabBar';
 import { CAPACITY_STEPS, weekStart } from './data/engine';
 import { toISODate, type Task } from './data/types';
@@ -14,18 +14,12 @@ import {
   loadFoyer,
   loadSettings,
   loadTasks,
-  markDone,
   onAuthChange,
-  saveChoices,
   saveMaterielAbsent,
-  saveSettings,
   createTask,
   deleteTask,
-  setActive,
-  setInSchedule,
-  undoDone,
   updateTask,
-  setPlannedDay,
+  recordVisit,
   type Foyer as FoyerT,
   type Session,
   type UserSettings,
@@ -45,7 +39,8 @@ const MesTaches = lazy(() => import('./screens/MesTaches').then((m) => ({ defaul
 const Carnet = lazy(() => import('./screens/Carnet').then((m) => ({ default: m.Carnet })));
 const Echeancier = lazy(() => import('./screens/Echeancier').then((m) => ({ default: m.Echeancier })));
 const Profil = lazy(() => import('./screens/Profil').then((m) => ({ default: m.Profil })));
-import { gentleWeek } from './lib/douceur';
+import { gentleState } from './data/douceur';
+import { flush, send } from './lib/outbox';
 
 // Lien d'invitation ou de mot de passe oublié : on le repère avant que Supabase ne nettoie l'adresse.
 const LINK_TYPE = /type=(invite|recovery)/.exec(window.location.hash)?.[1] as 'invite' | 'recovery' | undefined;
@@ -98,7 +93,21 @@ export function App() {
   const [toastAction, setToastAction] = useState<{ label: string; run: () => void } | null>(null);
   const [error, setError] = useState('');
   const today = useMemo(() => new Date(), []);
-  const douceur = useMemo(() => gentleWeek(today), [today]);
+  // Semaine de reprise, décidée pour tout le foyer à partir de sa dernière visite.
+  const foyerId = foyer?.id;
+  const gentle = useMemo(
+    () => (foyer ? gentleState(today, foyer.visit) : { kind: null, week: null }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [foyerId, today],
+  );
+  const douceur = gentle.kind;
+  useEffect(() => {
+    if (!foyer) return;
+    recordVisit(foyer.id, toISODate(today), gentle.week, gentle.kind).catch(() => {
+      /* hors ligne : la visite sera notée la prochaine fois */
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [foyerId]);
   // Bilan de la semaine : les tâches se font surtout du jeudi au dimanche, donc on pose la question
   // une fois la semaine finie, du dimanche 18 h au mardi soir, sur la semaine qui vient de s'écouler.
   const feedbackWeek = useMemo(() => {
@@ -125,16 +134,22 @@ export function App() {
 
   /* Données du foyer */
   const [offline, setOffline] = useState(false);
+  const beforeDone = useRef(new Map<string, Task>());
   const refresh = useCallback(async (f: FoyerT) => {
-    const t = await loadTasks(f.id, today);
-    setTasks(t);
+    await flush();
+    setTasks(await loadTasks(f.id, today));
     setOffline(false);
+  }, [today]);
+
+  // Copie locale des dernières données (y compris les changements en attente), pour l'ouverture sans réseau.
+  useEffect(() => {
+    if (!session || !foyer) return;
     try {
-      localStorage.setItem(DATA_CACHE, JSON.stringify({ userId: session?.userId, foyer: f, tasks: t }));
+      localStorage.setItem(DATA_CACHE, JSON.stringify({ userId: session.userId, foyer, tasks }));
     } catch {
       /* stockage plein ou indisponible */
     }
-  }, [today, session?.userId]);
+  }, [session, foyer, tasks]);
 
   useEffect(() => {
     if (!session) return;
@@ -177,13 +192,17 @@ export function App() {
     }
   }, [foyer?.profile]);
 
-  // Retour du réseau : on recharge.
+  // Retour du réseau : on envoie ce qui attendait, puis on recharge.
   useEffect(() => {
-    if (!offline) return;
-    const back = () => location.reload();
+    if (!foyer) return;
+    const back = () => {
+      refresh(foyer)
+        .then(() => setToast('Réseau retrouvé : vos changements sont envoyés.'))
+        .catch(() => {});
+    };
     window.addEventListener('online', back);
     return () => window.removeEventListener('online', back);
-  }, [offline]);
+  }, [foyer, refresh]);
 
   useEffect(() => {
     if (!session || !feedbackWeek) return;
@@ -217,7 +236,7 @@ export function App() {
 
   const changeSettings = (s: UserSettings) => {
     setSettings(s);
-    if (session) saveSettings(session.userId, s).catch((err) => setError((err as Error).message));
+    if (session) send({ kind: 'settings', userId: session.userId, settings: s }).catch((err) => setError((err as Error).message));
   };
 
   if (session === undefined) return <Loading />;
@@ -262,8 +281,14 @@ export function App() {
 
   const undo = async (task: Task) => {
     try {
-      await undoDone(task.id);
-      await refresh(foyer);
+      const r = await send({ kind: 'undo', taskId: task.id });
+      if (r === 'sent') await refresh(foyer);
+      else {
+        // Sans réseau : on remet la tâche telle qu'elle était avant « C'est fait ».
+        const before = beforeDone.current.get(task.id);
+        if (before) setTasks((all) => all.map((t) => (t.id === task.id ? before : t)));
+        setOffline(true);
+      }
       setToastAction(null);
       setToast(`Validation de « ${task.title} » annulée.`);
     } catch (err) {
@@ -274,7 +299,7 @@ export function App() {
   const toggleFollow = (task: Task) => {
     const value = !task.inSchedule;
     setTasks((all) => all.map((t) => (t.id === task.id ? { ...t, inSchedule: value } : t)));
-    setInSchedule(task.id, value).catch((err) => {
+    send({ kind: 'follow', taskId: task.id, value }).catch((err) => {
       setTasks((all) => all.map((t) => (t.id === task.id ? { ...t, inSchedule: !value } : t)));
       setError((err as Error).message);
     });
@@ -291,7 +316,7 @@ export function App() {
       <Suspense fallback={null}>
       {offline && (
         <div className="notice" role="status" style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top) + 8px)', left: 12, right: 12, zIndex: 49, background: 'var(--chip-bg)', color: 'var(--ink)', boxShadow: 'var(--shadow)', maxWidth: 520, margin: '0 auto' }}>
-          Hors ligne : voici les dernières données connues. Les changements reprendront avec le réseau.
+          Hors ligne : vos changements sont gardés sur le téléphone et partiront dès le retour du réseau.
         </div>
       )}
       {error && (
@@ -358,17 +383,24 @@ export function App() {
           }}
           onSaveChoices={(choices) => {
             setTasks((all) => all.map((t) => (t.id === open.id ? { ...t, choices } : t)));
-            saveChoices(open.id, choices).catch((err) => setError((err as Error).message));
+            send({ kind: 'choices', taskId: open.id, choices }).catch((err) => setError((err as Error).message));
           }}
           onBack={() => setOpenId(null)}
           onDone={async (cost, note) => {
             try {
               const task = open;
-              await markDone(foyer.id, session.userId, task.id, today, cost, note);
-              await refresh(foyer);
+              const day = toISODate(today);
+              const r = await send({ kind: 'done', foyerId: foyer.id, userId: session.userId, taskId: task.id, day, cost, note: note ?? '' });
+              if (r === 'sent') await refresh(foyer);
+              else {
+                // Sans réseau : noté sur le téléphone, envoyé au retour du réseau.
+                beforeDone.current.set(task.id, task);
+                setTasks((all) => all.map((t) => (t.id === task.id ? { ...t, lastDone: day, lastValidated: day, plannedDay: undefined } : t)));
+                setOffline(true);
+              }
               setOpenId(null);
               setToastAction({ label: 'Annuler', run: () => undo(task) });
-              setToast(`« ${task.title} » noté au carnet.`);
+              setToast(r === 'sent' ? `« ${task.title} » noté au carnet.` : `« ${task.title} » noté sur le téléphone : envoi dès le retour du réseau.`);
             } catch (err) {
               setError((err as Error).message);
             }
@@ -381,7 +413,7 @@ export function App() {
           onToggleActive={(t) => {
             const value = !t.active;
             setTasks((all) => all.map((x) => (x.id === t.id ? { ...x, active: value } : x)));
-            setActive(t.id, value).catch((err) => {
+            send({ kind: 'active', taskId: t.id, value }).catch((err) => {
               setTasks((all) => all.map((x) => (x.id === t.id ? { ...x, active: !value } : x)));
               setError((err as Error).message);
             });
@@ -427,7 +459,7 @@ export function App() {
               onSchedule={() => setSchedule(true)}
               onPlan={async (t, day) => {
                 try {
-                  await setPlannedDay(foyer.id, t.id, day);
+                  await send({ kind: 'plan', foyerId: foyer.id, taskId: t.id, day });
                   setTasks((all) => all.map((x) => (x.id === t.id ? { ...x, plannedDay: day ?? undefined } : x)));
                 } catch (err) {
                   setError((err as Error).message);

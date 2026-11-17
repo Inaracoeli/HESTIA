@@ -1,4 +1,4 @@
-// Copie de src/data/types.ts pour la fonction hestia-rappel.
+// Fichier généré depuis src/data/types.ts par scripts/sync-fonctions.mjs : ne pas modifier ici.
 export type Domain = 'maison' | 'exterieur' | 'vehicule';
 
 /** 1 = sécurité ou obligation légale, 2 = évite des dégâts coûteux, 3 = confort, 4 = esthétique */
