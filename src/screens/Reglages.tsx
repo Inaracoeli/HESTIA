@@ -3,7 +3,8 @@ import { Topbar } from '../components/Pinned';
 import { useSwipeBack } from '../components/useSwipeBack';
 import { CAPACITY_STEPS, formatMinutes } from '../data/engine';
 import type { Level } from '../data/types';
-import { signOut, type UserSettings } from '../lib/api';
+import { useState, type FormEvent } from 'react';
+import { setPassword, signOut, type UserSettings } from '../lib/api';
 
 const STEPS_MIN = CAPACITY_STEPS;
 const LEVELS: { id: Level; name: string; note: string }[] = [
@@ -110,6 +111,8 @@ export function Reglages({ email, settings, dark, onChange, onBack, onOpenGuide 
           <IconChevronRight size={18} />
         </button>
 
+        <PasswordForm />
+
         <section className="card card--list">
           <div style={{ minHeight: 56, display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ flexGrow: 1, fontSize: 14, color: 'var(--ink-soft)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{email}</span>
@@ -119,5 +122,37 @@ export function Reglages({ email, settings, dark, onChange, onBack, onOpenGuide 
         </div>
       </div>
     </div>
+  );
+}
+
+/** Changer son mot de passe (utile après un mot de passe provisoire). */
+function PasswordForm() {
+  const [pwd, setPwd] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setMsg(null);
+    try {
+      await setPassword(pwd);
+      setPwd('');
+      setMsg({ ok: true, text: 'Mot de passe changé.' });
+    } catch (err) {
+      setMsg({ ok: false, text: (err as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <form className="card" onSubmit={submit} style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <h2 className="title-2" style={{ fontSize: 17 }}>Mot de passe</h2>
+      <label className="field">
+        <span className="field__label">Nouveau mot de passe (8 caractères minimum)</span>
+        <input className="input" type="password" required minLength={8} autoComplete="new-password" value={pwd} onChange={(e) => setPwd(e.target.value)} />
+      </label>
+      <button className="btn-secondary" type="submit" disabled={busy}>{busy ? 'Enregistrement…' : 'Changer mon mot de passe'}</button>
+      {msg && <div className={`notice ${msg.ok ? 'notice--ok' : 'notice--error'}`} role="status">{msg.text}</div>}
+    </form>
   );
 }

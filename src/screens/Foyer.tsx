@@ -14,11 +14,19 @@ type Props = {
 };
 
 /** « Foyer » : tout ce qui concerne la maison et le foyer. Les réglages personnels sont à part. */
+/** Mot de passe provisoire lisible : deux mots et un nombre. */
+function tempPassword(): string {
+  const mots = ['flamme', 'foyer', 'jardin', 'braise', 'volet', 'tuile', 'pivoine', 'cerise', 'chene', 'galet'];
+  const pick = () => mots[Math.floor(Math.random() * mots.length)];
+  return `${pick()}-${pick()}-${10 + Math.floor(Math.random() * 90)}`;
+}
+
 export function Foyer({ foyer, taskCount, onOpenTasks, onOpenProfile, onOpenJournal, onOpenSettings, onOpenGuide }: Props) {
   const isAdmin = foyer.role === 'admin';
 
   const [members, setMembers] = useState<Member[]>([]);
   const [invite, setInvite] = useState('');
+  const [temp, setTemp] = useState(tempPassword);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -31,12 +39,15 @@ export function Foyer({ foyer, taskCount, onOpenTasks, onOpenProfile, onOpenJour
     setBusy(true);
     setMessage(null);
     try {
-      const statut = await inviteMember(foyer.id, invite);
+      const statut = await inviteMember(foyer.id, invite, temp);
       setMessage({
         ok: true,
-        text: statut === 'invite' ? `Invitation envoyée à ${invite}.` : `${invite} avait déjà un compte : il est ajouté au foyer et peut se connecter.`,
+        text: statut === 'cree'
+          ? `Compte créé. Donnez à cette personne son e-mail (${invite}) et le mot de passe « ${temp} » : elle pourra le changer dans Réglages.`
+          : `${invite} avait déjà un compte : il est ajouté au foyer et se connecte avec son mot de passe habituel.`,
       });
       setInvite('');
+      setTemp(tempPassword());
       setMembers(await loadMembers(foyer.id));
     } catch (err) {
       setMessage({ ok: false, text: (err as Error).message });
@@ -94,10 +105,15 @@ export function Foyer({ foyer, taskCount, onOpenTasks, onOpenProfile, onOpenJour
           {isAdmin && (
             <form onSubmit={sendInvite} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <label className="field">
-                <span className="field__label">Inviter par e-mail</span>
+                <span className="field__label">Ajouter un membre : son e-mail</span>
                 <input className="input" type="email" required placeholder="prenom@exemple.fr" value={invite} onChange={(e) => setInvite(e.target.value)} />
               </label>
-              <button className="btn-gold" type="submit" disabled={busy}>{busy ? 'Envoi…' : 'Envoyer l’invitation'}</button>
+              <label className="field">
+                <span className="field__label">Mot de passe provisoire</span>
+                <input className="input" type="text" required minLength={8} autoComplete="off" value={temp} onChange={(e) => setTemp(e.target.value)} />
+              </label>
+              <p className="meta" style={{ margin: 0, fontSize: 13, lineHeight: 1.4 }}>Aucun e-mail n'est envoyé : transmettez vous-même ce mot de passe. La personne pourra le changer dans Réglages.</p>
+              <button className="btn-gold" type="submit" disabled={busy}>{busy ? 'Ajout…' : 'Ajouter au foyer'}</button>
             </form>
           )}
           {message && <div className={`notice ${message.ok ? 'notice--ok' : 'notice--error'}`} role="status">{message.text}</div>}

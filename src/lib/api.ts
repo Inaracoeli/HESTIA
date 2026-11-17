@@ -93,9 +93,10 @@ export async function loadMembers(foyerId: string): Promise<Member[]> {
   return (data ?? []).map((m: { user_id: string; email: string | null; role: Role }) => ({ userId: m.user_id, email: m.email, role: m.role }));
 }
 
-export async function inviteMember(foyerId: string, email: string): Promise<'invite' | 'ajoute'> {
+/** Ajoute un membre avec un mot de passe provisoire (aucun e-mail envoyé). */
+export async function inviteMember(foyerId: string, email: string, password: string): Promise<'cree' | 'ajoute'> {
   const { data, error } = await supabase.functions.invoke('hestia-inviter', {
-    body: { foyer_id: foyerId, email: email.trim().toLowerCase(), redirect_to: window.location.origin + '/' },
+    body: { foyer_id: foyerId, email: email.trim().toLowerCase(), password },
   });
   if (error) {
     let message = error.message;
@@ -107,7 +108,7 @@ export async function inviteMember(foyerId: string, email: string): Promise<'inv
     }
     throw new Error(message);
   }
-  return (data as { statut: 'invite' | 'ajoute' }).statut;
+  return (data as { statut: 'cree' | 'ajoute' }).statut;
 }
 
 /* ---------- Réglages ---------- */

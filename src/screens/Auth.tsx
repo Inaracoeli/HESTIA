@@ -70,7 +70,7 @@ export function Login() {
           {mode === 'login' ? 'Mot de passe oublié ?' : 'Retour à la connexion'}
         </button>
       </form>
-      <p className="meta" style={{ margin: 0, textAlign: 'center', lineHeight: 1.4 }}>Hestia fonctionne sur invitation.</p>
+      <p className="meta" style={{ margin: 0, textAlign: 'center', lineHeight: 1.4 }}>Votre compte est créé par l’administrateur du foyer.</p>
     </Shell>
   );
 }
@@ -122,7 +122,7 @@ export function NoAccess({ email }: { email: string | null }) {
     <Shell>
       <h1 className="title-2" style={{ fontSize: 22 }}>Pas encore de foyer</h1>
       <p style={{ margin: 0, fontSize: 15, lineHeight: 1.45 }}>
-        Le compte {email ? <strong>{email}</strong> : 'utilisé'} n’est rattaché à aucun foyer Hestia. Demandez une invitation à l’administrateur du foyer.
+        Le compte {email ? <strong>{email}</strong> : 'utilisé'} n’est rattaché à aucun foyer Hestia. Demandez à l’administrateur du foyer de vous ajouter.
       </p>
       <button className="btn-gold" onClick={() => signOut()}>Se déconnecter</button>
     </Shell>

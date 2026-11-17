@@ -1,13 +1,13 @@
-// Invitation d'un membre dans un foyer Hestia.
-// Seul un administrateur du foyer peut inviter. La personne reçoit un e-mail,
-// choisit son mot de passe, puis se connecte. Si elle a déjà un compte
-// (FraisMI, DressIN…), elle est simplement ajoutée au foyer.
+// Ajout d'un membre dans un foyer Hestia, sans e-mail.
+// Seul un administrateur du foyer peut ajouter. Il choisit un mot de passe
+// provisoire, que la personne pourra changer dans Réglages. Si elle a déjà un
+// compte (FraisMI, DressIN…), elle est simplement ajoutée au foyer.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const ALLOWED_ORIGINS = ['https://hestia-homeflow.pages.dev', 'http://localhost:5173'];
+const ALLOWED_ORIGINS = ['https://hestia-home.pages.dev', 'http://localhost:5173'];
 
 function cors(origin: string | null) {
-  const allowed = origin && (ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.hestia-homeflow.pages.dev'));
+  const allowed = origin && (ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.hestia-home.pages.dev'));
   return {
     'Access-Control-Allow-Origin': allowed ? origin! : ALLOWED_ORIGINS[0],
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
   const { data: who } = await userClient.auth.getUser();
   if (!who.user) return reply(401, { erreur: 'Connectez-vous d’abord.' });
 
-  let body: { foyer_id?: string; email?: string; redirect_to?: string };
+  let body: { foyer_id?: string; email?: string; password?: string };
   try {
     body = await req.json();
   } catch {
@@ -42,7 +42,8 @@ Deno.serve(async (req) => {
   const email = (body.email ?? '').trim().toLowerCase();
   const foyerId = body.foyer_id ?? '';
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return reply(400, { erreur: 'Adresse e-mail invalide.' });
-  const redirect = body.redirect_to && ALLOWED_ORIGINS.some((o) => body.redirect_to!.startsWith(o)) ? body.redirect_to : ALLOWED_ORIGINS[0] + '/';
+  const password = body.password ?? '';
+  if (password.length < 8) return reply(400, { erreur: 'Le mot de passe provisoire doit faire au moins 8 caractères.' });
 
   const admin = createClient(url, serviceKey, { db: { schema: 'hestia' }, auth: { persistSession: false } });
 
@@ -50,12 +51,12 @@ Deno.serve(async (req) => {
   const { data: role } = await admin.from('membres').select('role').eq('foyer_id', foyerId).eq('user_id', who.user.id).maybeSingle();
   if (role?.role !== 'admin') return reply(403, { erreur: 'Seul l’administrateur du foyer peut inviter.' });
 
-  // Invitation, ou compte déjà existant ?
+  // Nouveau compte, ou compte déjà existant ?
   let userId: string | null = null;
-  let statut: 'invite' | 'ajoute' = 'invite';
-  const invited = await admin.auth.admin.inviteUserByEmail(email, { redirectTo: redirect, data: { app: 'hestia' } });
-  if (invited.data?.user) {
-    userId = invited.data.user.id;
+  let statut: 'cree' | 'ajoute' = 'cree';
+  const created = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { app: 'hestia' } });
+  if (created.data?.user) {
+    userId = created.data.user.id;
   } else {
     // Déjà inscrit : on retrouve son compte.
     statut = 'ajoute';
@@ -65,7 +66,7 @@ Deno.serve(async (req) => {
       userId = data.users.find((u) => u.email?.toLowerCase() === email)?.id ?? null;
       if (data.users.length < 200) break;
     }
-    if (!userId) return reply(400, { erreur: invited.error?.message ?? 'Invitation impossible.' });
+    if (!userId) return reply(400, { erreur: created.error?.message ?? 'Ajout impossible.' });
   }
 
   const { error: insertError } = await admin
