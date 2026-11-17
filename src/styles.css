@@ -498,3 +498,27 @@ html { background: var(--bg); }
   box-shadow: 0 0 18px rgba(245, 200, 107, 0.35), inset 0 0 12px rgba(245, 200, 107, 0.12), 0 0 0 1px rgba(245, 200, 107, 0.45);
 }
 :root[data-theme='dark'] .wordmark { filter: drop-shadow(0 0 4px rgba(255, 210, 122, 0.9)) drop-shadow(0 0 14px rgba(255, 140, 40, 0.55)); }
+
+/* Fiches par domaine : un halo léger de la couleur du domaine, discret mais repérable. */
+.topbar--maison, .header--maison { --dom: var(--maison); }
+.topbar--exterieur, .header--exterieur { --dom: var(--exterieur); }
+.topbar--vehicule, .header--vehicule { --dom: var(--vehicule); }
+.topbar--maison, .topbar--exterieur, .topbar--vehicule {
+  color: var(--header-ink);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--dom) 30%, transparent), color-mix(in srgb, var(--dom) 12%, transparent)),
+    var(--glass);
+  border-bottom: 2px solid color-mix(in srgb, var(--dom) 55%, transparent);
+  box-shadow: 0 6px 22px color-mix(in srgb, var(--dom) 22%, transparent);
+}
+.header--maison, .header--exterieur, .header--vehicule {
+  color: var(--header-ink);
+  background: radial-gradient(130% 100% at 50% 0%, color-mix(in srgb, var(--dom) 30%, transparent) 0%, transparent 75%);
+}
+.topbar--maison .icon-btn, .topbar--exterieur .icon-btn, .topbar--vehicule .icon-btn,
+.header--maison .icon-btn, .header--exterieur .icon-btn, .header--vehicule .icon-btn {
+  background: color-mix(in srgb, var(--dom) 16%, transparent); color: var(--header-ink);
+}
+:root[data-theme='dark'] .topbar--maison, :root[data-theme='dark'] .topbar--exterieur, :root[data-theme='dark'] .topbar--vehicule {
+  box-shadow: 0 0 26px color-mix(in srgb, var(--dom) 35%, transparent);
+}
