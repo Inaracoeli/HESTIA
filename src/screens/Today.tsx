@@ -60,15 +60,15 @@ export function Today({ tasks, today, capacity, douceur, onHelp, onOpen, feedbac
     <div className="screen">
       <Topbar>
         <Wordmark size={26} />
-        <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span className="num" style={{ fontSize: 13, fontWeight: 700 }}>{DATE_FMT.format(today)}</span>
+        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <button
             onClick={onHelp}
             aria-label="Aide : bien démarrer"
-            style={{ minWidth: 44, height: 32, padding: '0 10px', border: 0, borderRadius: 999, background: 'rgba(36, 30, 25, 0.14)', color: 'var(--on-gold)', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+            style={{ minWidth: 44, height: 30, padding: '0 10px', border: 0, borderRadius: 999, background: 'rgba(36, 30, 25, 0.14)', color: 'var(--on-gold)', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
           >
             ? <span style={{ fontWeight: 700 }}>Aide</span>
           </button>
+          <span className="num" style={{ fontSize: 13, fontWeight: 700 }}>{DATE_FMT.format(today)}</span>
         </span>
       </Topbar>
       <header className="header">
