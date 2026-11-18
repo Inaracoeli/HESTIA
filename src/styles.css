@@ -620,3 +620,32 @@ html { background: var(--bg); }
 }
 
 .topbar > * { position: relative; z-index: 1; }
+
+/* =====================================================================
+   Thème clair, 18/11 : bords en verre épais, teintés, au lieu du liseré blanc.
+   ===================================================================== */
+:root:not([data-theme='dark']) .topbar::before {
+  --edge: rgba(232, 163, 60, 0.5);
+  border: 3px solid var(--edge); border-top: 0;
+  box-shadow:
+    inset 0 -8px 14px -10px var(--edge),
+    0 10px 28px rgba(120, 70, 20, 0.14);
+}
+:root:not([data-theme='dark']) .topbar--scrolled::before {
+  box-shadow: inset 0 -8px 14px -10px var(--edge), 0 14px 34px rgba(120, 70, 20, 0.22);
+}
+:root:not([data-theme='dark']) .topbar--maison::before,
+:root:not([data-theme='dark']) .topbar--exterieur::before,
+:root:not([data-theme='dark']) .topbar--vehicule::before { --edge: color-mix(in srgb, var(--dom) 50%, transparent); }
+
+:root:not([data-theme='dark']) {
+  --card-border: rgba(240, 180, 95, 0.42);
+  --shadow: 0 10px 30px rgba(196, 120, 30, 0.14);
+}
+:root:not([data-theme='dark']) .card {
+  border-width: 2.5px; background-clip: padding-box;
+  box-shadow: inset 0 0 10px -4px rgba(240, 170, 80, 0.35);
+}
+:root:not([data-theme='dark']) .card--raised {
+  box-shadow: var(--shadow), inset 0 0 10px -4px rgba(240, 170, 80, 0.35);
+}

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Wordmark } from '../components/Brand';
-import { IconCheck, IconChevronRight, IconPlus } from '../components/Icons';
+import { IconCheck, IconChevronRight, IconHelp, IconPlus } from '../components/Icons';
 import { Topbar } from '../components/Pinned';
 import { Ring } from '../components/Ring';
 import { dueDate, formatMinutes, nextExtraTask, planWeeks, urgency, weekStart } from '../data/engine';
@@ -64,9 +64,9 @@ export function Today({ tasks, today, capacity, douceur, onHelp, onOpen, feedbac
           <button
             onClick={onHelp}
             aria-label="Aide : bien démarrer"
-            style={{ minWidth: 44, height: 30, padding: '0 10px', border: 0, borderRadius: 999, background: 'var(--pill-bg)', color: 'var(--header-ink)', boxShadow: 'var(--pill-glow)', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+            style={{ width: 36, height: 36, padding: 0, border: 0, borderRadius: 999, background: 'var(--pill-bg)', color: 'var(--header-ink)', boxShadow: 'var(--pill-glow)', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
           >
-            ? <span style={{ fontWeight: 700 }}>Aide</span>
+            <IconHelp size={22} />
           </button>
           <span className="num" style={{ fontSize: 13, fontWeight: 700 }}>{DATE_FMT.format(today)}</span>
         </span>
