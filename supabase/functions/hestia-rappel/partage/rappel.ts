@@ -10,10 +10,13 @@ export function weekendMessage(tasks: Task[], today: Date, capacity: number, dou
   const pending = tasks.filter((t) => !(t.lastDone >= monday));
   const [week] = planWeeks(pending, today, [capacity], { gentle: !!douceur });
   const picks = weekendPicks(week.tasks, 3);
-  if (picks.length === 0) return { titre: 'Hestia', corps: 'Rien d’urgent ce week-end. Profitez-en.' };
+  // Le dimanche : « Aujourd'hui » ; du jeudi au samedi : « Ce week-end » ; sinon « Cette semaine ».
+  const day = today.getDay();
+  const when = day === 0 ? 'Aujourd’hui' : day >= 4 ? 'Ce week-end' : 'Cette semaine';
+  if (picks.length === 0) return { titre: 'Hestia', corps: day === 0 ? 'Rien d’urgent aujourd’hui. Profitez-en.' : 'Rien d’urgent ce week-end. Profitez-en.' };
   const total = formatMinutes(picks.reduce((s, t) => s + t.minutes, 0));
   return {
-    titre: picks.length > 1 ? `Ce week-end, ${picks.length} petites choses (${total})` : `Ce week-end, une petite chose (${total})`,
+    titre: picks.length > 1 ? `${when}, ${picks.length} petites choses (${total})` : `${when}, une petite chose (${total})`,
     corps: picks.map((t) => `• ${t.title} (${formatMinutes(t.minutes)})`).join('\n'),
   };
 }

@@ -4,7 +4,7 @@ import { useSwipeBack } from '../components/useSwipeBack';
 import { CAPACITY_STEPS, formatMinutes } from '../data/engine';
 import type { Level } from '../data/types';
 import { useState, type CSSProperties, type FormEvent } from 'react';
-import { setPassword, signOut, type UserSettings } from '../lib/api';
+import { setPassword, signOut, type Alarm, type UserSettings } from '../lib/api';
 import { pushState, subscribePush, testPush } from '../lib/push';
 
 const STEPS_MIN = CAPACITY_STEPS;
@@ -161,18 +161,29 @@ function PasswordForm() {
   );
 }
 
+/** Jours dans l'ordre de la semaine française (lundi d'abord) ; 0 = dimanche comme en JavaScript. */
 const JOURS = [
-  { v: 4, l: 'Jeudi' },
-  { v: 5, l: 'Vendredi' },
-  { v: 6, l: 'Samedi' },
-  { v: 0, l: 'Dimanche' },
+  { v: 1, c: 'L', l: 'lun.' },
+  { v: 2, c: 'M', l: 'mar.' },
+  { v: 3, c: 'M', l: 'mer.' },
+  { v: 4, c: 'J', l: 'jeu.' },
+  { v: 5, c: 'V', l: 'ven.' },
+  { v: 6, c: 'S', l: 'sam.' },
+  { v: 0, c: 'D', l: 'dim.' },
 ];
-const HEURES = ['08:00', '12:00', '18:00', '20:00'];
 
-/** Rappel du week-end : 2 ou 3 tâches rapides à recopier sur l'ardoise. */
+function daysLabel(days: number[]): string {
+  if (days.length === 7) return 'Tous les jours';
+  if (days.length === 0) return 'Aucun jour choisi';
+  if (days.length === 2 && days.includes(6) && days.includes(0)) return 'Le week-end';
+  return JOURS.filter((j) => days.includes(j.v)).map((j) => j.l).join(' ');
+}
+
+/** Rappels : 2 ou 3 petites choses à recopier sur l'ardoise, autant de rappels que voulu, comme des alarmes. */
 function Rappel({ userId, value, onChange }: { userId: string; value: UserSettings['reminder']; onChange: (v: UserSettings['reminder']) => void }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [editing, setEditing] = useState<Alarm | null>(null);
   const state = pushState();
   const run = async (f: () => Promise<void>) => {
     setBusy(true);
@@ -190,15 +201,17 @@ function Rappel({ userId, value, onChange }: { userId: string; value: UserSettin
       if (on) await subscribePush(userId);
       onChange({ ...value, on });
     });
-  const chip = (on: boolean): CSSProperties => ({
-    minHeight: 40, padding: '0 12px', borderRadius: 12, fontSize: 14, fontWeight: on ? 700 : 500,
-    border: on ? '2px solid var(--gold-2)' : '1px solid var(--line)', background: on ? 'var(--chip-bg)' : 'var(--card)', color: 'var(--ink)',
-  });
+  const setList = (list: Alarm[]) => onChange({ ...value, list: [...list].sort((a, b) => a.time.localeCompare(b.time)) });
+  const save = (a: Alarm) => {
+    setList(value.list.some((x) => x.id === a.id) ? value.list.map((x) => (x.id === a.id ? a : x)) : [...value.list, a]);
+    setEditing(null);
+  };
   return (
+    <>
     <section className="card" style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <h2 className="title-2" style={{ fontSize: 17 }}>Rappel du week-end</h2>
+      <h2 className="title-2" style={{ fontSize: 17 }}>Rappels</h2>
       <p className="meta" style={{ margin: 0, fontSize: 13, lineHeight: 1.45 }}>
-        Une notification avec 2 ou 3 petites choses à faire, à recopier sur l’ardoise de la maison. Rien d’autre.
+        Une notification avec 2 ou 3 petites choses à faire, à recopier sur l’ardoise de la maison. Ajoutez autant de rappels que vous voulez, comme des alarmes.
       </p>
       {state === 'installer' ? (
         <div className="notice" style={{ background: 'var(--chip-bg)', color: 'var(--ink)' }}>
@@ -208,29 +221,29 @@ function Rappel({ userId, value, onChange }: { userId: string; value: UserSettin
         <div className="notice" style={{ background: 'var(--chip-bg)', color: 'var(--ink)' }}>Ce navigateur ne permet pas les notifications.</div>
       ) : (
         <>
-          <Switch label="Recevoir le rappel" on={value.on} onChange={(v) => !busy && toggle(v)} />
+          <Switch label="Recevoir les rappels" on={value.on} onChange={(v) => !busy && toggle(v)} />
           {value.on && (
             <>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {JOURS.map((j) => (
-                  <button key={j.v} style={chip(value.day === j.v)} aria-pressed={value.day === j.v} onClick={() => onChange({ ...value, day: j.v })}>{j.l}</button>
+              <div className="card--list" style={{ display: 'flex', flexDirection: 'column' }}>
+                {value.list.length === 0 && <p className="meta" style={{ margin: '4px 0' }}>Aucun rappel pour l’instant.</p>}
+                {value.list.map((a) => (
+                  <div key={a.id} style={{ minHeight: 68, display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px solid var(--divider)' }}>
+                    <button onClick={() => setEditing(a)} aria-label={`Modifier le rappel de ${a.time}`} style={{ flexGrow: 1, border: 0, background: 'none', padding: '8px 0', textAlign: 'left', color: 'var(--ink)', opacity: a.on ? 1 : 0.45, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span className="num" style={{ fontSize: 30, fontWeight: 600, letterSpacing: -0.5, lineHeight: 1.1 }}>{a.time.replace(':', ' h ')}</span>
+                      <span className="meta" style={{ fontSize: 13 }}>{daysLabel(a.days)}</span>
+                    </button>
+                    <button className="switch" role="switch" aria-checked={a.on} aria-label={`Rappel de ${a.time} ${a.on ? 'actif' : 'inactif'}`} onClick={() => setList(value.list.map((x) => (x.id === a.id ? { ...x, on: !x.on } : x)))}>
+                      <span className="switch__track"><span className="switch__knob" /></span>
+                    </button>
+                  </div>
                 ))}
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-                {HEURES.map((h) => (
-                  <button key={h} style={chip(value.time === h)} aria-pressed={value.time === h} onClick={() => onChange({ ...value, time: h })}>{h.replace(':00', ' h')}</button>
-                ))}
-                <input
-                  type="time"
-                  aria-label="Autre heure"
-                  value={value.time}
-                  onChange={(e) => /^\d\d:\d\d$/.test(e.target.value) && onChange({ ...value, time: e.target.value })}
-                  style={{ ...chip(!HEURES.includes(value.time)), fontFamily: 'inherit' }}
-                />
-              </div>
-              <button className="btn-secondary" disabled={busy} onClick={() => run(async () => {
+              <button className="btn-secondary" onClick={() => setEditing({ id: Math.random().toString(36).slice(2, 9), days: [5], time: '11:00', on: true })}>
+                <IconPlus size={18} /> Ajouter un rappel
+              </button>
+              <button className="btn-link" disabled={busy} onClick={() => run(async () => {
                 const n = await testPush();
-                setMsg({ ok: n > 0, text: n > 0 ? 'Rappel envoyé : regardez vos notifications.' : 'Aucun appareil abonné : désactivez puis réactivez le rappel.' });
+                setMsg({ ok: n > 0, text: n > 0 ? 'Rappel envoyé : regardez vos notifications.' : 'Aucun appareil abonné : désactivez puis réactivez les rappels.' });
               })}>
                 {busy ? 'Un instant…' : 'Recevoir un essai maintenant'}
               </button>
@@ -240,5 +253,64 @@ function Rappel({ userId, value, onChange }: { userId: string; value: UserSettin
       )}
       {msg && <div className={`notice ${msg.ok ? 'notice--ok' : 'notice--error'}`} role="status">{msg.text}</div>}
     </section>
+      {editing && (
+        <AlarmEditor
+          alarm={editing}
+          isNew={!value.list.some((x) => x.id === editing.id)}
+          onSave={save}
+          onDelete={() => { setList(value.list.filter((x) => x.id !== editing.id)); setEditing(null); }}
+          onClose={() => setEditing(null)}
+        />
+      )}
+    </>
+  );
+}
+
+function AlarmEditor({ alarm, isNew, onSave, onDelete, onClose }: { alarm: Alarm; isNew: boolean; onSave: (a: Alarm) => void; onDelete: () => void; onClose: () => void }) {
+  const [time, setTime] = useState(alarm.time);
+  const [days, setDays] = useState(alarm.days);
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="sheet" role="dialog" aria-label={isNew ? 'Nouveau rappel' : 'Modifier le rappel'} onClick={(e) => e.stopPropagation()}>
+        <span className="sheet__grip" aria-hidden="true" />
+        <h2 className="title-2">{isNew ? 'Nouveau rappel' : 'Modifier le rappel'}</h2>
+        <label className="field">
+          <span className="field__label">Heure</span>
+          <input
+            className="input num"
+            type="time"
+            value={time}
+            onChange={(e) => /^\d\d:\d\d$/.test(e.target.value) && setTime(e.target.value)}
+            style={{ fontSize: 28, fontWeight: 600, height: 64, textAlign: 'center' }}
+          />
+        </label>
+        <div className="field">
+          <span className="field__label">Jours</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 6 }}>
+            {JOURS.map((j) => {
+              const on = days.includes(j.v);
+              return (
+                <button
+                  key={j.v}
+                  aria-pressed={on}
+                  aria-label={j.l}
+                  onClick={() => setDays(on ? days.filter((d) => d !== j.v) : [...days, j.v])}
+                  style={{
+                    height: 44, borderRadius: 999, fontSize: 15, fontWeight: 700,
+                    border: on ? 0 : '1px solid var(--line)', background: on ? 'var(--gold)' : 'var(--card)', color: on ? 'var(--on-gold)' : 'var(--ink)',
+                  }}
+                >
+                  {j.c}
+                </button>
+              );
+            })}
+          </div>
+          <span className="meta" style={{ fontSize: 13 }}>{daysLabel(days)}</span>
+        </div>
+        <button className="btn-gold" disabled={days.length === 0} onClick={() => onSave({ ...alarm, time, days, on: true })}>Enregistrer</button>
+        {!isNew && <button className="btn-link" style={{ color: '#9B2C1F' }} onClick={onDelete}>Supprimer ce rappel</button>}
+        <button className="btn-link" onClick={onClose}>Annuler</button>
+      </div>
+    </div>
   );
 }

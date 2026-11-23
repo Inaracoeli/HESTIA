@@ -14,12 +14,12 @@ const STEPS: Step[] = [
   },
   {
     icon: <IconCheck size={26} />, where: 'Une tâche de la liste', title: 'Ouvrir, faire, « C’est fait »',
-    text: 'Touchez une tâche : la fiche explique pourquoi c’est utile, les étapes adaptées à votre niveau et le matériel. Une fois terminé, touchez « C’est fait » : la prochaine échéance se recale toute seule.',
-    tip: 'Une erreur ? « Annuler » apparaît juste après, et reste dans la fiche toute la semaine.',
+    text: 'Touchez une tâche : la fiche explique pourquoi c’est utile, les étapes adaptées à votre niveau et le matériel. « C’est fait » est en haut de la fiche ; cocher toutes les étapes la valide aussi. La prochaine échéance se recale toute seule.',
+    tip: 'Pas le moment, ou encore bon (des essuie-glaces qui tiennent) ? « Plus tard » la reporte : semaine prochaine, dans un mois, un an ou à la date de votre choix. Une autre tâche prend sa place.',
   },
   {
-    icon: <IconGear size={26} />, where: 'Foyer › Réglages', title: 'Le rappel du week-end',
-    text: 'Activez le rappel : chaque vendredi midi (jour et heure réglables), une notification liste 2 ou 3 petites choses. Recopiez-les sur l’ardoise ou le calendrier de la maison, c’est tout.',
+    icon: <IconGear size={26} />, where: 'Foyer › Réglages', title: 'Les rappels',
+    text: 'Activez les rappels : par défaut vendredi, samedi et dimanche à 11 h, une notification liste 2 ou 3 petites choses. Ajoutez-en ou modifiez-les comme des alarmes. Recopiez-les sur l’ardoise ou le calendrier de la maison, c’est tout.',
     tip: 'Sur iPhone, ajoutez d’abord Hestia à l’écran d’accueil (Partager › Sur l’écran d’accueil).',
   },
   {
@@ -32,7 +32,7 @@ const STEPS: Step[] = [
   },
   {
     icon: <IconHouse size={26} />, where: 'Foyer › Mes tâches', title: 'Ce qui ne vous concerne pas',
-    text: 'Une bascule met une tâche en pause sans rien perdre. Vous pouvez aussi régler son rythme, ou créer vos propres tâches. Glissez une tâche vers la gauche pour aller plus vite.',
+    text: 'Une bascule met une tâche en pause ou l’active, sans rien perdre ; la recherche la retrouve en un instant. Vous pouvez aussi régler son rythme, ou créer vos propres tâches. Glissez une tâche vers la gauche pour aller plus vite.',
   },
   {
     icon: <IconHouse size={26} />, where: 'Foyer › Composition de la maison', title: 'Votre maison, en six questions',
@@ -45,7 +45,7 @@ const STEPS: Step[] = [
   },
   {
     icon: <IconCalendar size={26} />, where: 'Onglet Planning', title: 'Voir plus loin, si besoin',
-    text: 'Les trois prochaines semaines, et la possibilité de fixer un jour à une tâche (le petit calendrier). L’Échéancier montre les grands rendez-vous de l’année.',
+    text: 'Les trois prochaines semaines. Le petit calendrier programme une tâche à un jour ou à n’importe quelle date : programmée plus loin, elle quitte les semaines d’avant. L’Échéancier montre les grands rendez-vous de l’année.',
   },
   {
     icon: <IconStar size={26} filled />, where: 'Échéancier', title: 'Suivre une tâche',
@@ -57,7 +57,7 @@ const STEPS: Step[] = [
   },
   {
     icon: <IconGear size={26} />, where: 'Foyer › Réglages', title: 'À votre mesure',
-    text: 'Temps par semaine, niveau de bricolage, thème sombre, mot de passe. Et ce tuto reste accessible depuis la pastille « ? Aide » en haut de l’onglet Semaine.',
+    text: 'Temps par semaine, niveau de bricolage, thème sombre, mot de passe. Et ce tuto reste accessible depuis le bouton « ? » en haut de l’onglet Semaine.',
     tip: 'Glissez vers la droite pour revenir en arrière, partout.',
   },
 ];

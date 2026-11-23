@@ -131,7 +131,7 @@ export function Esprit({ onBack, onOpenTuto }: { onBack: () => void; onOpenTuto:
               <IconCheck size={16} />
             </span>
             <span style={{ fontSize: 15, lineHeight: 1.45 }}>
-              En résumé : le rappel du vendredi recopié sur l'ardoise, quelques tâches le week-end, une réponse le dimanche soir. Hestia s'occupe du reste.
+              En résumé : les rappels du week-end recopiés sur l'ardoise, quelques tâches le week-end, une réponse le dimanche soir. Hestia s'occupe du reste.
             </span>
           </div>
         </div>

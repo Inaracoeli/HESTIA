@@ -41,8 +41,10 @@ export function score(task: Task, at: Date): number {
   return Math.min(urgency(task, at), URGENCY_CAP) * WEIGHT[task.importance];
 }
 
-/** Prochaine échéance, repoussée au début de la saison si elle tombe hors saison. */
-export function dueDate(task: Task): Date {
+/** Prochaine échéance : la date programmée s'il y en a une, sinon d'après le rythme,
+ *  repoussée au début de la saison si elle tombe hors saison. */
+export function dueDate(task: Task, today?: Date): Date {
+  if (task.plannedDay && (!today || task.plannedDay >= toISODate(today))) return new Date(task.plannedDay + 'T00:00:00');
   const d = new Date(new Date(task.lastDone + 'T00:00:00').getTime() + task.intervalDays * DAY);
   if (inSeason(task, d)) return d;
   for (let i = 1; i <= 12; i++) {
@@ -95,7 +97,8 @@ export function planWeeks(tasks: Task[], today: Date, capacities: number[], opts
 
     // 2. Puis les tâches mûres, par priorité, dans la limite du temps disponible.
     const ripe = pool
-      .filter((t) => !placed.has(t.id) && (inSeason(t, start) || inSeason(t, end)) && urgency(t, end) >= 0.85)
+      // Une tâche programmée pour une semaine suivante attend sa semaine.
+      .filter((t) => !placed.has(t.id) && !(t.plannedDay && t.plannedDay > endISO) && (inSeason(t, start) || inSeason(t, end)) && urgency(t, end) >= 0.85)
       .sort((a, b) => score(b, end) - score(a, end));
     let forced = 0;
     for (const t of ripe) {

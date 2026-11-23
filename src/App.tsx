@@ -4,6 +4,7 @@ import { CAPACITY_STEPS, weekStart } from './data/engine';
 import { toISODate, type Task } from './data/types';
 import {
   DEFAULT_SETTINGS,
+  normalizeReminder,
   getSession,
   loadFeedback,
   loadMembers,
@@ -60,7 +61,10 @@ function cachedData(userId: string): { foyer: FoyerT; tasks: Task[] } | null {
 function cachedSettings(): UserSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_CACHE);
-    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    if (raw) {
+      const s = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } as UserSettings;
+      return { ...s, reminder: normalizeReminder(s.reminder) };
+    }
   } catch {
     /* stockage indisponible */
   }
@@ -386,6 +390,22 @@ export function App() {
             send({ kind: 'choices', taskId: open.id, choices }).catch((err) => setError((err as Error).message));
           }}
           onBack={() => setOpenId(null)}
+          onPostpone={async (day) => {
+            const task = open;
+            try {
+              await send({ kind: 'plan', foyerId: foyer.id, taskId: task.id, day });
+              setTasks((all) => all.map((x) => (x.id === task.id ? { ...x, plannedDay: day ?? undefined } : x)));
+              setOpenId(null);
+              setToastAction(null);
+              setToast(
+                day
+                  ? `« ${task.title} » programmée le ${new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(day + 'T12:00:00'))}.`
+                  : `Date retirée : « ${task.title} » revient à son rythme habituel.`,
+              );
+            } catch (err) {
+              setError((err as Error).message);
+            }
+          }}
           onDone={async (cost, note) => {
             try {
               const task = open;

@@ -7,6 +7,8 @@ import { DOMAIN_COLOR, DOMAIN_LABEL, resolveSteps, type Domain, type Task } from
 import type { TaskEdit } from '../lib/api';
 
 const DOMAINS: Domain[] = ['maison', 'exterieur', 'vehicule'];
+/** Recherche sans tenir compte des accents ni des majuscules */
+const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[’']/g, ' ').toLowerCase();
 const RHYTHMS: [number, string][] = [
   [7, '1 sem.'], [14, '2 sem.'], [30, '1 mois'], [60, '2 mois'], [90, '3 mois'], [180, '6 mois'], [365, '1 an'], [730, '2 ans'],
 ];
@@ -25,8 +27,8 @@ type Props = {
   onDelete: (t: Task) => Promise<void>;
 };
 
-/* ---------- Ligne glissable : glisser à gauche révèle « Régler » et « Supprimer » ---------- */
-function SwipeRow({ children, onEdit, onDelete }: { children: ReactNode; onEdit: () => void; onDelete: () => void }) {
+/* ---------- Ligne glissable : glisser à gauche révèle « Régler » et « Activer » (ou « Pause ») ---------- */
+function SwipeRow({ children, active, onEdit, onToggle }: { children: ReactNode; active: boolean; onEdit: () => void; onToggle: () => void }) {
   const start = useRef<{ x: number; y: number; base: number } | null>(null);
   const horizontal = useRef(false);
   const [dx, setDx] = useState(0);
@@ -62,13 +64,16 @@ function SwipeRow({ children, onEdit, onDelete }: { children: ReactNode; onEdit:
 
   return (
     <div style={{ position: 'relative', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, display: 'flex' }} aria-hidden={dx === 0}>
-        <button onClick={() => { setDx(0); onEdit(); }} style={{ width: 78, border: 0, background: 'var(--divider)', color: 'var(--ink)', fontSize: 12, fontWeight: 700 }}>Régler</button>
-        <button onClick={() => { setDx(0); onDelete(); }} style={{ width: 86, border: 0, background: '#9B2C1F', color: '#FFFFFF', fontSize: 12, fontWeight: 700 }}>Supprimer</button>
-      </div>
+      {/* Les actions n'existent que quand la ligne est ouverte : rien ne transparaît sous le verre. */}
+      {(dx !== 0 || dragging) && (
+        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, display: 'flex' }}>
+          <button onClick={() => { setDx(0); onEdit(); }} style={{ width: 78, border: 0, background: 'var(--ink-soft)', color: 'var(--bg)', fontSize: 13, fontWeight: 700 }}>Régler</button>
+          <button onClick={() => { setDx(0); onToggle(); }} style={{ width: 86, border: 0, background: active ? '#8A6A3A' : '#2C7A3F', color: '#FFFFFF', fontSize: 13, fontWeight: 700 }}>{active ? 'Pause' : 'Activer'}</button>
+        </div>
+      )}
       <div
         {...handlers}
-        style={{ position: 'relative', background: 'var(--card)', transform: dx ? `translateX(${dx}px)` : 'none', transition: dragging ? 'none' : 'transform 0.22s ease', boxShadow: dx ? '4px 0 12px rgba(42,36,32,0.14)' : 'none' }}
+        style={{ position: 'relative', background: dx || dragging ? 'var(--bg)' : 'transparent', transform: dx ? `translateX(${dx}px)` : 'none', transition: dragging ? 'none' : 'transform 0.22s ease', boxShadow: dx ? '4px 0 12px rgba(42,36,32,0.14)' : 'none' }}
       >
         {children}
       </div>
@@ -239,9 +244,11 @@ function Editor({ task, onClose, onSave, onDelete }: { task: Task | null; onClos
 export function MesTaches({ tasks, onBack, onToggleActive, onSave, onDelete }: Props) {
   const swipe = useSwipeBack(onBack);
   const [editing, setEditing] = useState<Task | 'new' | null>(null);
-  const [deleting, setDeleting] = useState<Task | null>(null);
   const [filter, setFilter] = useState<Domain | 'all'>('all');
+  const [query, setQuery] = useState('');
   const active = tasks.filter((t) => t.active).length;
+  const q = normalize(query.trim());
+  const shown = q ? tasks.filter((t) => normalize(t.title).includes(q)) : tasks;
 
   return (
     <div className="swipe-sheet" style={swipe.style} {...swipe.handlers}>
@@ -266,10 +273,16 @@ export function MesTaches({ tasks, onBack, onToggleActive, onSave, onDelete }: P
             Nouvelle tâche
           </button>
 
+          <label className="search-field">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher une tâche" aria-label="Rechercher une tâche" enterKeyHint="search" />
+            {query && <button type="button" aria-label="Effacer la recherche" onClick={() => setQuery('')}>×</button>}
+          </label>
+
           <div
             role="tablist"
             aria-label="Filtrer par domaine"
-            style={{ position: 'sticky', top: 'calc(env(safe-area-inset-top) + 76px)', zIndex: 20, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 4, background: 'var(--divider)', borderRadius: 14, padding: 4, boxShadow: 'var(--shadow)' }}
+            className="seg-bar"
           >
             {([['all', 'Tout'], ['maison', 'Maison'], ['exterieur', 'Jardin'], ['vehicule', 'Voiture']] as const).map(([v, label]) => {
               const on = filter === v;
@@ -289,7 +302,7 @@ export function MesTaches({ tasks, onBack, onToggleActive, onSave, onDelete }: P
           </div>
 
           {DOMAINS.filter((d) => filter === 'all' || filter === d).map((d) => {
-            const list = tasks.filter((t) => t.domain === d);
+            const list = shown.filter((t) => t.domain === d);
             if (list.length === 0) return null;
             return (
               <section key={d} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -303,11 +316,11 @@ export function MesTaches({ tasks, onBack, onToggleActive, onSave, onDelete }: P
                 <div className="card" style={{ overflow: 'hidden' }}>
                   {list.map((t, i) => (
                     <div key={t.id} style={{ borderTop: i ? '1px solid var(--divider)' : 'none' }}>
-                      <SwipeRow onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)}>
+                      <SwipeRow active={t.active} onEdit={() => setEditing(t)} onToggle={() => onToggleActive(t)}>
                         <div style={{ minHeight: 64, padding: '0 12px 0 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
                           <button onClick={() => setEditing(t)} style={{ flexGrow: 1, minWidth: 0, border: 0, background: 'none', padding: '10px 0', textAlign: 'left', color: 'var(--ink)', opacity: t.active ? 1 : 0.55, display: 'flex', flexDirection: 'column', gap: 3 }}>
                             <span style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.25 }}>{t.title}</span>
-                            <span className="meta num">{t.active ? `${t.periodLabel} · ${formatMinutes(t.minutes)}` : 'En pause'}</span>
+                            <span className="meta num">{t.active ? `${t.periodLabel} · ${formatMinutes(t.minutes)}` : 'En pause · touchez l’interrupteur pour l’activer'}</span>
                           </button>
                           <button className="switch" role="switch" aria-checked={t.active} aria-label={`${t.title} : ${t.active ? 'active' : 'en pause'}`} onClick={() => onToggleActive(t)}>
                             <span className="switch__track"><span className="switch__knob" /></span>
@@ -320,7 +333,8 @@ export function MesTaches({ tasks, onBack, onToggleActive, onSave, onDelete }: P
               </section>
             );
           })}
-          <p className="meta" style={{ margin: 0, textAlign: 'center', fontSize: 13 }}>Glissez une tâche vers la gauche pour la régler ou la supprimer.</p>
+          {q && shown.length === 0 && <p className="meta" style={{ margin: 0, textAlign: 'center' }}>Aucune tâche ne correspond à « {query.trim()} ».</p>}
+          <p className="meta" style={{ margin: 0, textAlign: 'center', fontSize: 13, lineHeight: 1.4 }}>Glissez une tâche vers la gauche pour la régler, l’activer ou la mettre en pause. Pour la supprimer : Régler, tout en bas.</p>
         </div>
       </div>
 
@@ -333,22 +347,6 @@ export function MesTaches({ tasks, onBack, onToggleActive, onSave, onDelete }: P
         />
       )}
 
-      {deleting && (
-        <div className="sheet-backdrop" onClick={() => setDeleting(null)}>
-          <div className="sheet" role="dialog" aria-label="Supprimer la tâche" onClick={(e) => e.stopPropagation()}>
-            <span className="sheet__grip" aria-hidden="true" />
-            <h2 className="title-2">Supprimer « {deleting.title} » ?</h2>
-            <p style={{ margin: 0, fontSize: 15, lineHeight: 1.45 }}>Son historique sera effacé aussi. Pour l'arrêter sans la perdre, mettez-la plutôt en pause.</p>
-            <button
-              style={{ height: 54, border: 0, borderRadius: 18, background: '#9B2C1F', color: '#FFFFFF', fontSize: 16, fontWeight: 700 }}
-              onClick={async () => { await onDelete(deleting); setDeleting(null); }}
-            >
-              Supprimer
-            </button>
-            <button className="btn-secondary" onClick={() => setDeleting(null)}>Annuler</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -85,3 +85,19 @@ test('le rappel du week-end garde 3 tâches, essentielles puis les plus courtes'
   const d = task({ minutes: 90, importance: 1 });
   assert.deepEqual(weekendPicks([a, b, c, d]).map((t) => t.id), [d.id, b.id, c.id]);
 });
+
+test('une tâche programmée plus tard sort de la semaine et laisse la place à une autre', () => {
+  const later = task({ importance: 1, ago: 60, plannedDay: '2026-12-02' }); // dans deux semaines
+  const other = task({ ago: 40 });
+  const [w0, w1, w2] = planWeeks([later, other], TODAY, [90, 90, 90]);
+  assert.ok(!w0.tasks.includes(later));
+  assert.ok(w0.tasks.includes(other));
+  assert.ok(!w1.tasks.includes(later));
+  assert.ok(w2.tasks.includes(later));
+});
+
+test('une tâche reportée à dans un an n’apparaît dans aucune des semaines affichées', () => {
+  const later = task({ importance: 1, ago: 60, plannedDay: '2027-11-18' });
+  const weeks = planWeeks([later], TODAY, [90, 90, 90]);
+  assert.ok(weeks.every((w) => !w.tasks.includes(later)));
+});

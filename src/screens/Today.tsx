@@ -48,7 +48,7 @@ export function Today({ tasks, today, capacity, douceur, onHelp, onOpen, feedbac
 
   const upcoming = tasks
     .filter((t) => t.active && !listed.has(t.id))
-    .sort((a, b) => dueDate(a).getTime() - dueDate(b).getTime())
+    .sort((a, b) => dueDate(a, today).getTime() - dueDate(b, today).getTime())
     .slice(0, 3);
 
   const addOne = () => {
@@ -152,7 +152,7 @@ export function Today({ tasks, today, capacity, douceur, onHelp, onOpen, feedbac
                 <button key={t.id} className="card" onClick={() => onOpen(t)} style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'left', color: 'var(--ink)' }}>
                   <span className="dot" style={{ background: DOMAIN_COLOR[t.domain] }} />
                   <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.2 }}>{t.title}</span>
-                  <span className="meta num">{SHORT_FMT.format(dueDate(t))}</span>
+                  <span className="meta num">{SHORT_FMT.format(dueDate(t, today))}</span>
                 </button>
               ))}
             </div>

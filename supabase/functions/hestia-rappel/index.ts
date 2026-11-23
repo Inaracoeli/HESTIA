@@ -2,8 +2,9 @@
  * Rappel du week-end d'Hestia : 2 ou 3 tâches rapides, à recopier sur l'ardoise de la maison.
  * - GET : clé publique VAPID, pour abonner un appareil (créée au premier appel).
  * - POST { essai: true } avec la session : envoie le rappel tout de suite, pour essayer.
- * - POST par la tâche planifiée (en-tête x-rappel), toutes les 15 minutes : envoie les rappels dus
- *   (bon jour, heure atteinte depuis moins de 3 h, pas encore envoyé ce jour-là).
+ * - POST par la tâche planifiée (en-tête x-rappel), toutes les 15 minutes : envoie les rappels dus.
+ *   Chaque personne a une liste de rappels, comme des alarmes (jours, heure, actif) ; un rappel part
+ *   le bon jour, une fois l'heure atteinte (moins de 3 h après), et une seule fois ce jour-là.
  *
  * Les règles (priorités, reprise en douceur, message) viennent de src/data, copiées dans ./partage
  * par scripts/sync-fonctions.mjs : la notification propose exactement ce que propose l'app.
@@ -92,24 +93,33 @@ async function message(userId: string, capacite: number, aujourdhui: Date): Prom
   return { ...weekendMessage(taches, aujourdhui, capacite, kind), url: '/' };
 }
 
-type Reglage = { user_id: string; capacite_min: number; rappel_jour: number; rappel_heure: string; rappel_envoye_le: string | null };
+type Alarme = { id: string; jours: number[]; heure: string; actif: boolean };
+type Reglage = { user_id: string; capacite_min: number; rappels: Alarme[] | null; rappels_envoyes: Record<string, string> | null };
 
 async function tournee(): Promise<number> {
   const ici = maintenant();
   const { data } = await admin
     .from('reglages')
-    .select('user_id, capacite_min, rappel_jour, rappel_heure, rappel_envoye_le')
-    .eq('rappel_actif', true)
-    .eq('rappel_jour', ici.semaine);
+    .select('user_id, capacite_min, rappels, rappels_envoyes')
+    .eq('rappel_actif', true);
   let n = 0;
   for (const r of (data ?? []) as Reglage[]) {
     try {
-      const [h, mi] = r.rappel_heure.split(':').map(Number);
-      const heure = h * 60 + mi;
-      if (r.rappel_envoye_le === ici.jour || ici.minutes < heure || ici.minutes > heure + 180) continue;
+      const envoyes = { ...(r.rappels_envoyes ?? {}) };
+      const dus = (r.rappels ?? []).filter((a) => {
+        if (!a.actif || !a.jours?.includes(ici.semaine) || envoyes[a.id] === ici.jour) return false;
+        const [h, mi] = a.heure.split(':').map(Number);
+        const heure = h * 60 + mi;
+        return ici.minutes >= heure && ici.minutes <= heure + 180;
+      });
+      if (dus.length === 0) continue;
+      // Plusieurs rappels dus en même temps : une seule notification.
       const msg = await message(r.user_id, r.capacite_min, ici.date);
       if (msg) n += await envoyer(r.user_id, msg);
-      await admin.from('reglages').update({ rappel_envoye_le: ici.jour }).eq('user_id', r.user_id);
+      for (const a of dus) envoyes[a.id] = ici.jour;
+      // On ne garde que les rappels qui existent encore.
+      const ids = new Set((r.rappels ?? []).map((a) => a.id));
+      await admin.from('reglages').update({ rappels_envoyes: Object.fromEntries(Object.entries(envoyes).filter(([k]) => ids.has(k))) }).eq('user_id', r.user_id);
     } catch {
       // Un rappel qui échoue n'empêche pas les autres
     }

@@ -33,7 +33,11 @@ function task(id: string, minutes: number, importance: Task['importance'] = 3): 
 
 test('le message du rappel liste 3 petites choses avec leur durée', () => {
   const m = weekendMessage([task('A', 60), task('B', 10), task('C', 20), task('D', 15, 1)], TODAY, 240, null);
-  assert.equal(m.titre, 'Ce week-end, 3 petites choses (45 min)');
+  assert.equal(m.titre, 'Cette semaine, 3 petites choses (45 min)');
+  const vendredi = new Date('2026-11-20T12:00:00');
+  assert.match(weekendMessage([task('A', 10)], vendredi, 240, null).titre, /^Ce week-end/);
+  const dimanche = new Date('2026-11-22T12:00:00');
+  assert.match(weekendMessage([task('A', 10)], dimanche, 240, null).titre, /^Aujourd’hui/);
   assert.equal(m.corps, '• D (15 min)\n• B (10 min)\n• C (20 min)');
 });
 

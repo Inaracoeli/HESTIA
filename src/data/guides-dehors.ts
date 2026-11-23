@@ -179,7 +179,7 @@ export const GUIDES_DEHORS: Record<string, Guide> = {
   /* ---------- Voiture ---------- */
   pneus: {
     comprendre:
-      'Un pneu sous-gonflé freine moins bien, chauffe, s’use plus vite et fait consommer davantage. Il perd naturellement de la pression, même sans crevaison : un contrôle mensuel suffit.',
+      'Les pneus sont le seul contact de la voiture avec la route. Un pneu sous-gonflé freine moins bien, chauffe, s’use plus vite et fait consommer davantage ; il perd naturellement de la pression, même sans crevaison. Un pneu usé, abîmé ou trop vieux accroche mal sous la pluie. Un tour complet par mois, pression et état, suffit.',
     expert: [
       'La valeur conseillée (étiquette de la portière) s’entend pneus froids ; en charge ou sur autoroute, utilisez la valeur « charge ».',
       'Contrôle de l’usure : les témoins dans les rainures signalent 1,6 mm ; le freinage sur sol mouillé se dégrade nettement dès 3 mm.',
@@ -187,7 +187,7 @@ export const GUIDES_DEHORS: Record<string, Guide> = {
       'Voiture électrique : le poids de la batterie use davantage les pneus ; des pneus adaptés (marquage spécifique) sont souvent préconisés.',
       'Une usure plus marquée d’un côté signale un défaut de parallélisme.',
     ],
-    pieges: ['Se fier à l’aspect : un pneu peut perdre 0,5 bar sans que ça se voie.', 'Oublier la roue de secours.'],
+    pieges: ['Se fier à l’aspect : un pneu peut perdre 0,5 bar sans que ça se voie.', 'Oublier la roue de secours.', 'Ne regarder que l’extérieur : l’usure commence souvent côté intérieur, braquez les roues pour la voir.', 'Garder un pneu ancien parce qu’il a encore des rainures : la gomme durcie accroche mal.'],
     regle: 'Profondeur minimale légale : 1,6 mm sur toute la bande de roulement, sous peine d’amende (135 € en général) et d’immobilisation.',
     sources: [EQUIPEMENTS],
   },

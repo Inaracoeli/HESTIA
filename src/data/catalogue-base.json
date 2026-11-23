@@ -113,12 +113,12 @@
  },
  "pneus": {
   "id": "pneus",
-  "title": "Pression des pneus",
+  "title": "État et pression des pneus",
   "domain": "vehicule",
   "importance": 1,
   "intervalDays": 30,
   "periodLabel": "Tous les mois",
-  "minutes": 10,
+  "minutes": 15,
   "budget": 0,
   "difficulty": 1,
   "pro": false,
@@ -169,7 +169,10 @@
     "Dévissez le bouchon de la valve et posez l’embout bien droit.",
     "Lisez la pression, puis ajoutez ou retirez de l’air jusqu’à la bonne valeur.",
     "Revissez le bouchon et passez à la roue suivante : les quatre, plus la roue de secours si vous en avez une.",
-    "Regardez l’usure : les petits témoins au fond des rainures ne doivent pas affleurer."
+    "Usure : regardez au fond des rainures les petits témoins (repérés par « TWI » ou un triangle sur le flanc). S’ils affleurent la gomme, le pneu est à changer ; sous 3 mm, prévoyez-le.",
+    "Usure inégale : un pneu plus usé sur un bord que sur l’autre signale un problème de réglage (parallélisme) ou de pression, à faire vérifier au garage.",
+    "Flancs et bande de roulement : passez la main et l’œil tout autour. Une bosse (hernie), une coupure, des craquelures ou un clou planté imposent de passer au garage.",
+    "Âge : la date de fabrication est inscrite sur le flanc (4 chiffres, ex. 2319 = 23e semaine de 2019). Au-delà de 6 à 10 ans, la gomme durcit : faites-les contrôler."
    ],
    "intermediaire": [
     "Relevez la pression conseillée (portière conducteur), avant et arrière.",
@@ -190,11 +193,12 @@
      }
     },
     "Ajustez les quatre roues (et la roue de secours).",
-    "Coup d’œil aux témoins d’usure."
+    "Usure : témoins dans les rainures (1,6 mm légal, à prévoir sous 3 mm), usure régulière sur toute la largeur.",
+    "Flancs : ni hernie, ni coupure, ni craquelures ; rien de planté dans la bande. Âge sur le flanc (code à 4 chiffres)."
    ],
    "expert": [
-    "Contrôle et ajustement des quatre roues.",
-    "Usure et flancs."
+    "Pression des quatre roues et de la secours, à froid.",
+    "Profondeur et régularité de l’usure, flancs, âge (DOT)."
    ]
   }
  },

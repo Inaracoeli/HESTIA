@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useSwipeBack } from '../components/useSwipeBack';
-import { IconCheck, IconChevronLeft, IconStar } from '../components/Icons';
+import { IconCalendar, IconCheck, IconChevronLeft, IconStar } from '../components/Icons';
 import { Topbar } from '../components/Pinned';
 import { Comprendre, Liens, PlusLoin } from '../components/GuideBlocks';
 import { useGuide } from '../data/useGuide';
 import { dueDate, formatMinutes } from '../data/engine';
-import { DOMAIN_LABEL, resolveSteps, type Level, type Task } from '../data/types';
+import { DOMAIN_LABEL, resolveSteps, toISODate, type Level, type Task } from '../data/types';
 
 const LEVEL_LABEL: Record<Level, string> = { debutant: 'débutant', intermediaire: 'intermédiaire', expert: 'expert' };
 const DAY = 24 * 60 * 60 * 1000;
@@ -31,9 +31,20 @@ type Props = {
   onUndo: () => Promise<void>;
   onBack: () => void;
   onDone: (cost: number | null, note: string) => Promise<void> | void;
+  /** Programme la tâche à une date (elle quitte les semaines d'avant), ou retire la date */
+  onPostpone: (day: string | null) => Promise<void>;
 };
 
-export function TaskSheet({ task, level, today, missing, onToggleMissing, onSaveChoices, onToggleFollow, doneThisWeek, onUndo, onBack, onDone }: Props) {
+const LONG_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+/** Même jour, N mois plus tard (fin de mois respectée). */
+function addMonths(d: Date, n: number): Date {
+  const x = new Date(d.getFullYear(), d.getMonth() + n, 1);
+  x.setDate(Math.min(d.getDate(), new Date(x.getFullYear(), x.getMonth() + 1, 0).getDate()));
+  return x;
+}
+
+export function TaskSheet({ task, level, today, missing, onToggleMissing, onSaveChoices, onToggleFollow, doneThisWeek, onUndo, onBack, onDone, onPostpone }: Props) {
   const automatic = task.importance <= 2;
   const followed = automatic || task.inSchedule;
   const [choices, setChoices] = useState<Record<string, string>>(task.choices);
@@ -44,7 +55,7 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
   const swipe = useSwipeBack(onBack);
   const count = steps.filter((s) => checked[s]).length;
   const unanswered = task.questions.filter((q) => !choices[q.id]);
-  const days = Math.round((dueDate(task).getTime() - today.getTime()) / DAY);
+  const days = Math.round((dueDate(task, today).getTime() - today.getTime()) / DAY);
   const dueText = days > 1 ? `Échéance dans ${days} jours` : days >= 0 ? 'À faire maintenant' : 'À faire dès que possible';
   const color = `var(--${task.domain})`;
 
@@ -55,6 +66,22 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
   };
 
   const [closing, setClosing] = useState(false);
+  const [later, setLater] = useState(false);
+  const [otherDate, setOtherDate] = useState('');
+  /** Cocher la dernière étape vaut « C'est fait » : on passe directement à l'enregistrement. */
+  const toggleStep = (label: string, on: boolean) => {
+    const next = { ...checked, [label]: on };
+    setChecked(next);
+    if (on && steps.length > 0 && steps.every((x) => next[x])) setClosing(true);
+  };
+  const postpone = async (day: string | null) => {
+    setSaving(true);
+    try {
+      await onPostpone(day);
+    } finally {
+      setSaving(false);
+    }
+  };
   const [cost, setCost] = useState(task.budget > 0 ? String(task.budget) : '');
   const [note, setNote] = useState('');
   const finish = async () => {
@@ -98,6 +125,18 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
         </header>
 
         <div className="content" style={{ gap: 22 }}>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn-secondary" style={{ flexShrink: 0, padding: '0 18px' }} onClick={() => setLater(true)}>Plus tard</button>
+            <button className="btn-primary" style={{ flexGrow: 1, background: color }} onClick={() => setClosing(true)} disabled={saving}>
+              <IconCheck size={18} /> C'est fait
+            </button>
+          </div>
+          {task.plannedDay && task.plannedDay >= toISODate(today) && (
+            <div className="notice" style={{ background: 'var(--chip-bg)', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <IconCalendar size={18} />
+              <span style={{ flexGrow: 1 }}>Programmée le {LONG_FMT.format(new Date(task.plannedDay + 'T12:00:00'))}.</span>
+            </div>
+          )}
           <div className="card card--raised" style={{ padding: '14px 6px', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
             {[
               [formatMinutes(task.minutes), 'Durée'],
@@ -167,7 +206,7 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
                 const on = !!checked[label];
                 return (
                   <div key={label} className={`step${on ? ' step--done' : ''}`}>
-                    <button className="step__check" role="checkbox" aria-checked={on} aria-label={label} onClick={() => setChecked((c) => ({ ...c, [label]: !on }))}>
+                    <button className="step__check" role="checkbox" aria-checked={on} aria-label={label} onClick={() => toggleStep(label, !on)}>
                       <span className="step__circle" style={on ? { background: color, borderColor: color, color: '#FFFDF7' } : undefined}>
                         {on && <IconCheck size={14} />}
                       </span>
@@ -236,7 +275,7 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
           )}
 
           <div style={{ display: 'flex', gap: 10, padding: '4px 0 12px 0' }}>
-            <button className="btn-secondary" onClick={onBack}>Plus tard</button>
+            <button className="btn-secondary" onClick={() => setLater(true)}>Plus tard</button>
             <button className="btn-primary" style={{ flexGrow: 1, background: color }} onClick={() => setClosing(true)} disabled={saving}>
               C'est fait
             </button>
@@ -244,6 +283,53 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
           <p className="meta" style={{ textAlign: 'center', margin: 0 }}>Astuce : glissez vers la droite pour fermer.</p>
         </div>
       </div>
+      {later && (
+        <div className="sheet-backdrop" onClick={() => !saving && setLater(false)}>
+          <div className="sheet" role="dialog" aria-label="Reporter ou programmer" onClick={(e) => e.stopPropagation()}>
+            <span className="sheet__grip" aria-hidden="true" />
+            <h2 className="title-2">Pas maintenant ?</h2>
+            <p className="meta" style={{ margin: 0, fontSize: 14, lineHeight: 1.45 }}>
+              Choisissez quand la refaire : elle quitte vos semaines d’ici là, et une autre tâche prend sa place.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+              {([
+                ['La semaine prochaine', new Date(today.getTime() + 7 * DAY)],
+                ['Dans un mois', addMonths(today, 1)],
+                ['Dans 3 mois', addMonths(today, 3)],
+                ['Dans 6 mois', addMonths(today, 6)],
+                ['Dans un an', addMonths(today, 12)],
+              ] as const).map(([label, d]) => (
+                <button key={label} className="choice-btn" disabled={saving} onClick={() => postpone(toISODate(d))}>
+                  <span style={{ fontWeight: 700 }}>{label}</span>
+                  <span className="meta num" style={{ fontSize: 12 }}>{new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined }).format(d)}</span>
+                </button>
+              ))}
+              <label className="choice-btn" style={{ position: 'relative', overflow: 'hidden' }}>
+                <span style={{ fontWeight: 700 }}>Une date précise</span>
+                <span className="meta num" style={{ fontSize: 12 }}>{otherDate ? new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(otherDate + 'T12:00:00')) : 'Choisir…'}</span>
+                <input
+                  type="date"
+                  aria-label="Choisir une date"
+                  min={toISODate(today)}
+                  value={otherDate}
+                  disabled={saving}
+                  onChange={(e) => setOtherDate(e.target.value)}
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, fontSize: 16 }}
+                />
+              </label>
+            </div>
+            {otherDate && (
+              <button className="btn-gold" disabled={saving || otherDate < toISODate(today)} onClick={() => postpone(otherDate)}>
+                Programmer le {LONG_FMT.format(new Date(otherDate + 'T12:00:00'))}
+              </button>
+            )}
+            {task.plannedDay && (
+              <button className="btn-secondary" disabled={saving} onClick={() => postpone(null)}>Retirer la date programmée</button>
+            )}
+            <button className="btn-link" onClick={() => setLater(false)} disabled={saving}>Annuler</button>
+          </div>
+        </div>
+      )}
       {closing && (
         <div className="sheet-backdrop" onClick={() => !saving && setClosing(false)}>
           <div className="sheet" role="dialog" aria-label="Noter dans le carnet" onClick={(e) => e.stopPropagation()}>

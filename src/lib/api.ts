@@ -16,12 +16,23 @@ export type UserSettings = {
   level: Level;
   theme: 'auto' | 'clair' | 'sombre';
   motion: boolean;
-  /** Rappel du week-end : actif, jour (0 = dimanche … 5 = vendredi), heure « HH:MM » (heure de Paris) */
-  reminder: { on: boolean; day: number; time: string };
+  /** Rappels : interrupteur général (cet appareil reçoit les notifications) et liste de rappels,
+   *  comme des alarmes : jours (0 = dimanche … 6 = samedi), heure « HH:MM » (heure de Paris), actif ou non. */
+  reminder: { on: boolean; list: Alarm[] };
 };
+export type Alarm = { id: string; days: number[]; time: string; on: boolean };
+
+export const DEFAULT_ALARMS: Alarm[] = [{ id: 'we', days: [5, 6, 0], time: '11:00', on: true }];
+
+/** Remet d'aplomb un réglage de rappel venu d'une ancienne version (un seul jour, une seule heure). */
+export function normalizeReminder(r: unknown): UserSettings['reminder'] {
+  const x = (r ?? {}) as { on?: boolean; list?: Alarm[]; day?: number; time?: string };
+  if (Array.isArray(x.list)) return { on: !!x.on, list: x.list };
+  return { on: !!x.on, list: DEFAULT_ALARMS };
+}
 export type Session = { userId: string; email: string | null };
 
-export const DEFAULT_SETTINGS: UserSettings = { capacity: 90, level: 'intermediaire', theme: 'auto', motion: true, reminder: { on: false, day: 5, time: '12:00' } };
+export const DEFAULT_SETTINGS: UserSettings = { capacity: 90, level: 'intermediaire', theme: 'auto', motion: true, reminder: { on: false, list: DEFAULT_ALARMS } };
 
 function fail(error: { message: string } | null) {
   if (error) throw new Error(error.message);
@@ -136,20 +147,25 @@ export async function loadSettings(userId: string): Promise<UserSettings> {
     level: data.niveau,
     theme: data.theme,
     motion: data.animations,
-    reminder: { on: !!data.rappel_actif, day: data.rappel_jour ?? 5, time: data.rappel_heure ?? '12:00' },
+    reminder: {
+      on: !!data.rappel_actif,
+      list: Array.isArray(data.rappels)
+        ? (data.rappels as { id: string; jours: number[]; heure: string; actif: boolean }[]).map((a) => ({ id: a.id, days: a.jours, time: a.heure, on: a.actif }))
+        : DEFAULT_ALARMS,
+    },
   };
 }
 
 export async function saveSettings(userId: string, s: UserSettings): Promise<void> {
+  const reminder = normalizeReminder(s.reminder);
   const { error } = await supabase.from('reglages').upsert({
     user_id: userId,
     capacite_min: s.capacity,
     niveau: s.level,
     theme: s.theme,
     animations: s.motion,
-    rappel_actif: s.reminder.on,
-    rappel_jour: s.reminder.day,
-    rappel_heure: s.reminder.time,
+    rappel_actif: reminder.on,
+    rappels: reminder.list.map((a) => ({ id: a.id, jours: a.days, heure: a.time, actif: a.on })),
     updated_at: new Date().toISOString(),
   });
   fail(error);
