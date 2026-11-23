@@ -11,6 +11,7 @@ type Props = {
   onOpenTasks: () => void;
   onOpenProfile: () => void;
   onOpenJournal: () => void;
+  onOpenModule: (m: 'produits' | 'epargne' | 'appareils') => void;
 };
 
 /** « Foyer » : tout ce qui concerne la maison et le foyer. Les réglages personnels sont à part. */
@@ -21,7 +22,7 @@ function tempPassword(): string {
   return `${pick()}-${pick()}-${10 + Math.floor(Math.random() * 90)}`;
 }
 
-export function Foyer({ foyer, taskCount, onOpenTasks, onOpenProfile, onOpenJournal, onOpenSettings, onOpenGuide }: Props) {
+export function Foyer({ foyer, taskCount, onOpenTasks, onOpenProfile, onOpenJournal, onOpenModule, onOpenSettings, onOpenGuide }: Props) {
   const isAdmin = foyer.role === 'admin';
 
   const [members, setMembers] = useState<Member[]>([]);
@@ -79,6 +80,9 @@ export function Foyer({ foyer, taskCount, onOpenTasks, onOpenProfile, onOpenJour
             ['Mes tâches', `${taskCount} actives · pause, réglages, ajout`, onOpenTasks],
             ['Composition de la maison', foyer.profile ? 'Chauffage, équipements, extérieurs, véhicules' : 'À compléter pour un catalogue adapté', onOpenProfile],
             ['Carnet d’entretien', 'Historique et coûts réels', onOpenJournal],
+            ['Produits et courses', 'Ménage, consommables, liste de courses', () => onOpenModule('produits')],
+            ['Épargne', 'Mettre de côté pour les coups durs', () => onOpenModule('epargne')],
+            ['Appareils et garanties', 'Factures, notices, fins de garantie', () => onOpenModule('appareils')],
             ['Bien utiliser Hestia', 'L’esprit de l’app, en deux minutes', onOpenGuide],
           ] as const).map(([label, hint, action]) => (
             <button key={label} onClick={action} style={{ minHeight: 64, width: '100%', border: 0, background: 'none', padding: 0, display: 'flex', alignItems: 'center', gap: 12, color: 'var(--ink)', textAlign: 'left' }}>

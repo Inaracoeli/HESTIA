@@ -66,7 +66,7 @@ function maintenant(): { jour: string; semaine: number; minutes: number; date: D
 
 type Ligne = {
   id: string; titre: string; importance: Task['importance']; intervalle_jours: number; minutes: number;
-  derniere_fois: string | null; actif: boolean; mois: number[] | null; planifications: { jour: string }[] | null;
+  derniere_fois: string | null; actif: boolean; mois: number[] | null; planifications: { jour: string }[] | null; assigne_a: string | null;
 };
 
 /** Le message : les 2 ou 3 tâches rapides de la semaine, calculées comme dans l'app. */
@@ -81,16 +81,16 @@ async function message(userId: string, capacite: number, aujourdhui: Date): Prom
   if (!foyer) return null;
   const { data } = await admin
     .from('taches')
-    .select('id, titre, importance, intervalle_jours, minutes, derniere_fois, actif, mois, planifications(jour)')
+    .select('id, titre, importance, intervalle_jours, minutes, derniere_fois, actif, mois, assigne_a, planifications(jour)')
     .eq('foyer_id', foyer.id);
   const taches = ((data ?? []) as Ligne[]).map((r) => ({
     id: r.id, title: r.titre, importance: r.importance, intervalDays: r.intervalle_jours, minutes: r.minutes, active: r.actif,
-    months: r.mois ?? [], plannedDay: r.planifications?.[0]?.jour,
+    months: r.mois ?? [], plannedDay: r.planifications?.[0]?.jour, assignee: r.assigne_a ?? undefined,
     lastDone: r.derniere_fois ?? toISODate(new Date(aujourdhui.getTime() - r.intervalle_jours * 86400000)),
   })) as unknown as Task[];
   // Même reprise en douceur que l'app, pour tout le foyer (le rappel ne compte pas comme une visite).
   const { kind } = gentleState(aujourdhui, { lastVisit: foyer.derniere_visite, gentleWeek: foyer.douceur_semaine, gentleKind: foyer.douceur_type });
-  return { ...weekendMessage(taches, aujourdhui, capacite, kind), url: '/' };
+  return { ...weekendMessage(taches, aujourdhui, capacite, kind, userId), url: '/' };
 }
 
 type Alarme = { id: string; jours: number[]; heure: string; actif: boolean };

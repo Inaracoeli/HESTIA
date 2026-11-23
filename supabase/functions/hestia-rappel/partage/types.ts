@@ -44,6 +44,8 @@ export type Task = {
   lastValidated?: string;
   /** Jour choisi par l'utilisateur (AAAA-MM-JJ), facultatif */
   plannedDay?: string;
+  /** Membre du foyer qui s'en occupe (identifiant), facultatif */
+  assignee?: string;
 };
 
 export const DOMAIN_LABEL: Record<Domain, string> = {

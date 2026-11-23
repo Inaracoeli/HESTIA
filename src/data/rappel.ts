@@ -4,11 +4,12 @@ import { formatMinutes, planWeeks, weekendPicks, weekStart } from './engine';
 import type { Douceur } from './douceur';
 import { toISODate, type Task } from './types';
 
-export function weekendMessage(tasks: Task[], today: Date, capacity: number, douceur: Douceur): { titre: string; corps: string } {
+/** forUser : la personne qui reçoit le rappel ; les tâches confiées à un autre membre ne lui sont pas proposées. */
+export function weekendMessage(tasks: Task[], today: Date, capacity: number, douceur: Douceur, forUser?: string): { titre: string; corps: string } {
   const monday = toISODate(weekStart(today));
   const pending = tasks.filter((t) => !(t.lastDone >= monday));
   const [week] = planWeeks(pending, today, [capacity], { gentle: !!douceur });
-  const picks = weekendPicks(week.tasks, 3);
+  const picks = weekendPicks(week.tasks.filter((t) => !forUser || !t.assignee || t.assignee === forUser), 3);
   // Le dimanche : « Aujourd'hui » ; du jeudi au samedi : « Ce week-end » ; sinon « Cette semaine ».
   const day = today.getDay();
   const when = day === 0 ? 'Aujourd’hui' : day >= 4 ? 'Ce week-end' : 'Cette semaine';

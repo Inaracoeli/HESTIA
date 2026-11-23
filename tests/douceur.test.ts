@@ -44,3 +44,21 @@ test('le message du rappel liste 3 petites choses avec leur durée', () => {
 test('rien à faire : un message léger', () => {
   assert.equal(weekendMessage([], TODAY, 90, null).corps, 'Rien d’urgent ce week-end. Profitez-en.');
 });
+
+test('le rappel ne propose pas les tâches confiées à un autre membre', () => {
+  const a = { ...task('A', 10), assignee: 'autre' };
+  const b = { ...task('B', 15), assignee: 'moi' };
+  const c = task('C', 20);
+  const m = weekendMessage([a, b, c], new Date('2026-11-20T12:00:00'), 240, null, 'moi');
+  assert.ok(!m.corps.includes('• A'));
+  assert.ok(m.corps.includes('• B') && m.corps.includes('• C'));
+});
+
+test('le conseil du jour change d’un jour à l’autre et suit la saison', async () => {
+  const { conseilDuJour, CONSEILS } = await import('../src/data/conseils');
+  const a = conseilDuJour(new Date('2026-07-10T12:00:00'));
+  const b = conseilDuJour(new Date('2026-07-11T12:00:00'));
+  assert.notEqual(a, b);
+  const c = CONSEILS.find((x) => x.t === a)!;
+  assert.ok(!c.months || c.months.includes(7));
+});

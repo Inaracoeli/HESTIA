@@ -56,6 +56,11 @@ const STEPS: Step[] = [
     text: 'Chaque « C’est fait » y est noté, avec le coût réel et une note si vous voulez. Pratique pour l’assurance ou une revente.',
   },
   {
+    icon: <IconHouse size={26} />, where: 'Foyer', title: 'Courses, épargne, appareils',
+    text: 'Produits : marquez ce qui touche à sa fin, la liste de courses se fait toute seule. Épargne : un objectif par usage pour les coups durs. Appareils : factures en photo, notices et fins de garantie.',
+    tip: 'Chacun marche seul, même sans aucune tâche enregistrée.',
+  },
+  {
     icon: <IconGear size={26} />, where: 'Foyer › Réglages', title: 'À votre mesure',
     text: 'Temps par semaine, niveau de bricolage, thème sombre, mot de passe. Et ce tuto reste accessible depuis le bouton « ? » en haut de l’onglet Semaine.',
     tip: 'Glissez vers la droite pour revenir en arrière, partout.',

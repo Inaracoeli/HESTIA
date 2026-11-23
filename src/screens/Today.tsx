@@ -1,4 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Sheet } from '../components/Sheet';
+import { Tableau, useWide } from '../components/Tableau';
+import { conseilDuJour } from '../data/conseils';
+import { weekImage, weekText } from '../lib/ardoise';
+import type { Member } from '../lib/api';
 import { Wordmark } from '../components/Brand';
 import { IconCheck, IconChevronRight, IconHelp, IconPlus } from '../components/Icons';
 import { Topbar } from '../components/Pinned';
@@ -23,9 +28,23 @@ type Props = {
   feedbackWeek: string | null;
   feedbackGiven: boolean;
   onFeedback: (avis: 'trop' | 'bien' | 'pas_assez') => void;
+  foyerId: string;
+  members: Member[];
+  onOpenModule: (m: 'produits' | 'epargne' | 'appareils') => void;
 };
 
-export function Today({ tasks, today, capacity, douceur, onHelp, onOpen, feedbackWeek, feedbackGiven, onFeedback }: Props) {
+/** Prénom court d'un membre (début de l'e-mail). */
+export function shortName(members: Member[], id?: string): string | null {
+  if (!id) return null;
+  const e = members.find((m) => m.userId === id)?.email;
+  if (!e) return null;
+  const n = e.split('@')[0].split(/[._-]/)[0];
+  return n.charAt(0).toUpperCase() + n.slice(1);
+}
+
+export function Today({ tasks, today, capacity, douceur, onHelp, onOpen, feedbackWeek, feedbackGiven, onFeedback, foyerId, members, onOpenModule }: Props) {
+  const wide = useWide();
+  const [ardoise, setArdoise] = useState(false);
   const monday = toISODate(weekStart(today));
   const todayISO = toISODate(today);
   // Faites cette semaine : elles restent affichées, cochées.
@@ -83,6 +102,7 @@ export function Today({ tasks, today, capacity, douceur, onHelp, onOpen, feedbac
         </div>
       </header>
 
+      <div className={wide ? 'today-grid' : undefined}>
       <div className="content">
         {douceur && (
           <div className="notice" style={{ background: 'var(--chip-bg)', color: 'var(--ink)', lineHeight: 1.45 }}>
@@ -109,6 +129,7 @@ export function Today({ tasks, today, capacity, douceur, onHelp, onOpen, feedbac
                   <span className="meta num">
                     {DOMAIN_LABEL[t.domain]} · {formatMinutes(t.minutes)}
                     {t.plannedDay && !done ? ` · prévu ${WEEKDAY_FMT.format(new Date(t.plannedDay + 'T12:00:00'))}` : ''}
+                    {members.length > 1 && shortName(members, t.assignee) ? ` · ${shortName(members, t.assignee)}` : ''}
                   </span>
                 </span>
                 {t.importance === 1 && !done ? <span className="chip">Essentiel</span> : <IconChevronRight size={18} />}
@@ -121,6 +142,9 @@ export function Today({ tasks, today, capacity, douceur, onHelp, onOpen, feedbac
           <IconPlus size={18} />
           Une tâche de plus
         </button>
+        {todo.length > 0 && (
+          <button className="btn-link" onClick={() => setArdoise(true)} style={{ marginTop: -6 }}>Recopier sur l’ardoise</button>
+        )}
 
         {feedbackWeek && !feedbackGiven && !douceur && (
           <section className="card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, borderColor: 'var(--gold-2)' }}>
@@ -162,10 +186,69 @@ export function Today({ tasks, today, capacity, douceur, onHelp, onOpen, feedbac
         <div className="card" style={{ background: 'var(--chip-bg)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--chip-ink)' }}>Conseil du jour</span>
           <span style={{ fontSize: 14, lineHeight: 1.4 }}>
-            Après la pluie, secouez les tapis de la voiture et rangez le parapluie dans un sac : moins de buée demain matin.
+            {conseilDuJour(today)}
           </span>
         </div>
       </div>
+      {wide && (
+        <Tableau foyerId={foyerId} tasks={tasks.filter((t) => !doneIds.has(t.id))} today={today} capacity={capacity} onOpen={onOpen} onOpenModule={onOpenModule} />
+      )}
+      </div>
+      {ardoise && (
+        <ArdoiseSheet monday={weekStart(today)} tasks={todo} who={(t) => (members.length > 1 ? shortName(members, t.assignee) : null)} onClose={() => setArdoise(false)} />
+      )}
     </div>
+  );
+}
+
+/** Export de la semaine : image façon ardoise à partager, ou texte à copier. */
+function ArdoiseSheet({ monday, tasks, who, onClose }: { monday: Date; tasks: Task[]; who: (t: Task) => string | null; onClose: () => void }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [blob, setBlob] = useState<Blob | null>(null);
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    let u: string | null = null;
+    weekImage(monday, tasks, who).then((b) => {
+      setBlob(b);
+      u = URL.createObjectURL(b);
+      setUrl(u);
+    }).catch(() => setMsg('Image impossible sur cet appareil : copiez le texte.'));
+    return () => {
+      if (u) URL.revokeObjectURL(u);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const text = weekText(monday, tasks, who);
+  const shareImage = async () => {
+    if (!blob) return;
+    const file = new File([blob], 'hestia-semaine.png', { type: 'image/png' });
+    try {
+      if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: 'Ma semaine Hestia' });
+      else {
+        const a = document.createElement('a');
+        a.href = url!;
+        a.download = 'hestia-semaine.png';
+        a.click();
+      }
+    } catch {
+      // Partage annulé
+    }
+  };
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setMsg('Texte copié.');
+    } catch {
+      setMsg('Copie impossible.');
+    }
+  };
+  return (
+    <Sheet title="Recopier sur l’ardoise" onClose={onClose}>
+      {url ? <img src={url} alt={text} style={{ width: '100%', borderRadius: 14 }} /> : !msg && <p className="meta">Préparation…</p>}
+      <button className="btn-gold" disabled={!blob} onClick={shareImage}>Partager ou enregistrer l’image</button>
+      <button className="btn-secondary" onClick={copy}>Copier en texte</button>
+      {msg && <p className="meta" role="status" style={{ margin: 0, textAlign: 'center' }}>{msg}</p>}
+      <button className="btn-link" onClick={onClose}>Fermer</button>
+    </Sheet>
   );
 }

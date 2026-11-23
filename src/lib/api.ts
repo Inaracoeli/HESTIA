@@ -196,6 +196,7 @@ type TaskRow = {
   mois: number[] | null;
   planifications: { jour: string } | { jour: string }[] | null;
   realisations: { fait_le: string }[] | null;
+  assigne_a?: string | null;
 };
 
 function toTask(r: TaskRow, today: Date): Task {
@@ -226,6 +227,7 @@ function toTask(r: TaskRow, today: Date): Task {
     inSchedule: !!r.dans_echeancier,
     months: r.mois ?? [],
     plannedDay: plan?.jour,
+    assignee: r.assigne_a ?? undefined,
     lastValidated: (r.realisations ?? []).reduce<string | undefined>((m, x) => (!m || x.fait_le > m ? x.fait_le : m), undefined),
   };
 }
@@ -459,5 +461,11 @@ export async function loadFeedback(userId: string, week: string): Promise<Feedba
 
 export async function saveFeedback(foyerId: string, userId: string, week: string, avis: Feedback): Promise<void> {
   const { error } = await supabase.from('retours').upsert({ foyer_id: foyerId, user_id: userId, semaine: week, avis });
+  fail(error);
+}
+
+/** Qui s'occupe de la tâche (un membre du foyer), ou personne en particulier. */
+export async function setAssignee(taskId: string, userId: string | null): Promise<void> {
+  const { error } = await supabase.from('taches').update({ assigne_a: userId }).eq('id', taskId);
   fail(error);
 }

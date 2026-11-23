@@ -6,6 +6,8 @@ import { Comprendre, Liens, PlusLoin } from '../components/GuideBlocks';
 import { useGuide } from '../data/useGuide';
 import { dueDate, formatMinutes } from '../data/engine';
 import { DOMAIN_LABEL, resolveSteps, toISODate, type Level, type Task } from '../data/types';
+import type { Member } from '../lib/api';
+import { shortName } from './Today';
 
 const LEVEL_LABEL: Record<Level, string> = { debutant: 'débutant', intermediaire: 'intermédiaire', expert: 'expert' };
 const DAY = 24 * 60 * 60 * 1000;
@@ -33,6 +35,9 @@ type Props = {
   onDone: (cost: number | null, note: string) => Promise<void> | void;
   /** Programme la tâche à une date (elle quitte les semaines d'avant), ou retire la date */
   onPostpone: (day: string | null) => Promise<void>;
+  /** Membres du foyer, pour choisir qui s'occupe de la tâche */
+  members: Member[];
+  onAssign: (userId: string | null) => void;
 };
 
 const LONG_FMT = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -44,7 +49,7 @@ function addMonths(d: Date, n: number): Date {
   return x;
 }
 
-export function TaskSheet({ task, level, today, missing, onToggleMissing, onSaveChoices, onToggleFollow, doneThisWeek, onUndo, onBack, onDone, onPostpone }: Props) {
+export function TaskSheet({ task, level, today, missing, onToggleMissing, onSaveChoices, onToggleFollow, doneThisWeek, onUndo, onBack, onDone, onPostpone, members, onAssign }: Props) {
   const automatic = task.importance <= 2;
   const followed = automatic || task.inSchedule;
   const [choices, setChoices] = useState<Record<string, string>>(task.choices);
@@ -135,6 +140,16 @@ export function TaskSheet({ task, level, today, missing, onToggleMissing, onSave
             <div className="notice" style={{ background: 'var(--chip-bg)', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 10 }}>
               <IconCalendar size={18} />
               <span style={{ flexGrow: 1 }}>Programmée le {LONG_FMT.format(new Date(task.plannedDay + 'T12:00:00'))}.</span>
+            </div>
+          )}
+          {members.length > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span className="meta" style={{ fontSize: 13, fontWeight: 700 }}>Qui s’en occupe ?</span>
+              {[{ id: null as string | null, l: 'Personne en particulier' }, ...members.map((m) => ({ id: m.userId as string | null, l: shortName(members, m.userId) ?? 'Membre' }))].map((o) => (
+                <button key={o.id ?? 'x'} className="state-pill" aria-pressed={(task.assignee ?? null) === o.id} data-etat="ok" onClick={() => onAssign(o.id)}>
+                  {o.l}
+                </button>
+              ))}
             </div>
           )}
           <div className="card card--raised" style={{ padding: '14px 6px', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>

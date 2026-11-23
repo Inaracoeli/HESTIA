@@ -676,3 +676,24 @@ html { background: var(--bg); }
   border: 1px solid var(--card-border, var(--line)); box-shadow: var(--shadow);
 }
 :root:not([data-theme='dark']) .seg-bar { border-width: 2px; }
+
+/* V2 : feuilles longues, segments, jauges */
+.sheet--scroll { max-height: calc(100dvh - env(safe-area-inset-top) - 24px); overflow-y: auto; overscroll-behavior: contain; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; padding: 4px; border-radius: 14px; background: var(--divider); }
+.seg > button { min-height: 40px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-soft); font-size: 14px; font-weight: 700; }
+.seg > button[aria-pressed='true'] { background: var(--card); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }
+.gauge { height: 10px; border-radius: 999px; background: var(--progress-off, var(--divider)); overflow: hidden; }
+.gauge > span { display: block; height: 100%; border-radius: inherit; background: var(--progress-on, var(--gold)); box-shadow: var(--progress-glow, none); transition: width 0.4s ease; }
+.row-btn { min-height: 56px; width: 100%; border: 0; background: none; padding: 0; display: flex; align-items: center; gap: 12px; color: var(--ink); text-align: left; }
+.state-pill { min-height: 34px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--ink-soft); font-size: 12px; font-weight: 700; }
+.state-pill[aria-pressed='true'][data-etat='ok'] { background: #2C7A3F; border-color: #2C7A3F; color: #fff; }
+.state-pill[aria-pressed='true'][data-etat='bientot'] { background: #C98A1B; border-color: #C98A1B; color: #fff; }
+.state-pill[aria-pressed='true'][data-etat='vide'] { background: #B23A1E; border-color: #B23A1E; color: #fff; }
+.check-round { width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; border: 2px solid var(--line); background: transparent; display: grid; place-items: center; color: transparent; }
+.check-round[aria-checked='true'] { background: #2C7A3F; border-color: #2C7A3F; color: #fff; }
+
+/* Tableau de bord sur grand écran : la semaine à gauche, le reste à droite */
+@media (min-width: 900px) {
+  .today-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; padding-right: 20px; }
+  .tableau { display: flex; flex-direction: column; gap: 14px; position: sticky; top: calc(env(safe-area-inset-top) + 96px); }
+}

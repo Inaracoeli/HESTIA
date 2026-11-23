@@ -5,6 +5,7 @@ import { toISODate, type Task } from './data/types';
 import {
   DEFAULT_SETTINGS,
   normalizeReminder,
+  setAssignee,
   getSession,
   loadFeedback,
   loadMembers,
@@ -38,6 +39,9 @@ const Reglages = lazy(() => import('./screens/Reglages').then((m) => ({ default:
 const Tuto = lazy(() => import('./screens/Tuto').then((m) => ({ default: m.Tuto })));
 const MesTaches = lazy(() => import('./screens/MesTaches').then((m) => ({ default: m.MesTaches })));
 const Carnet = lazy(() => import('./screens/Carnet').then((m) => ({ default: m.Carnet })));
+const Produits = lazy(() => import('./screens/Produits').then((m) => ({ default: m.Produits })));
+const Epargne = lazy(() => import('./screens/Epargne').then((m) => ({ default: m.Epargne })));
+const Appareils = lazy(() => import('./screens/Appareils').then((m) => ({ default: m.Appareils })));
 const Echeancier = lazy(() => import('./screens/Echeancier').then((m) => ({ default: m.Echeancier })));
 const Profil = lazy(() => import('./screens/Profil').then((m) => ({ default: m.Profil })));
 import { gentleState } from './data/douceur';
@@ -92,6 +96,7 @@ export function App() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileLater, setProfileLater] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
+  const [module, setModule] = useState<'produits' | 'epargne' | 'appareils' | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [toast, setToast] = useState('');
   const [toastAction, setToastAction] = useState<{ label: string; run: () => void } | null>(null);
@@ -236,7 +241,7 @@ export function App() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [tab, openId, schedule, manage, journal, profileOpen, settingsOpen, guideOpen, tutoOpen]);
+  }, [tab, openId, schedule, manage, journal, module, profileOpen, settingsOpen, guideOpen, tutoOpen]);
 
   const changeSettings = (s: UserSettings) => {
     setSettings(s);
@@ -369,6 +374,12 @@ export function App() {
         <Esprit onBack={() => setGuideOpen(false)} onOpenTuto={() => { setGuideOpen(false); setTutoOpen(true); }} />
       ) : settingsOpen ? (
         <Reglages userId={session.userId} email={session.email} settings={settings} dark={dark} onChange={changeSettings} onBack={() => setSettingsOpen(false)} onOpenGuide={() => setGuideOpen(true)} />
+      ) : module === 'produits' ? (
+        <Produits foyerId={foyer.id} onBack={() => setModule(null)} />
+      ) : module === 'epargne' ? (
+        <Epargne foyerId={foyer.id} tasks={tasks} onBack={() => setModule(null)} />
+      ) : module === 'appareils' ? (
+        <Appareils foyerId={foyer.id} today={today} onBack={() => setModule(null)} />
       ) : journal ? (
         <Carnet foyerId={foyer.id} members={members} onBack={() => setJournal(false)} onChanged={() => refresh(foyer)} />
       ) : open ? (
@@ -390,6 +401,16 @@ export function App() {
             send({ kind: 'choices', taskId: open.id, choices }).catch((err) => setError((err as Error).message));
           }}
           onBack={() => setOpenId(null)}
+          members={members}
+          onAssign={async (userId) => {
+            const task = open;
+            setTasks((all) => all.map((x) => (x.id === task.id ? { ...x, assignee: userId ?? undefined } : x)));
+            try {
+              await setAssignee(task.id, userId);
+            } catch (err) {
+              setError((err as Error).message);
+            }
+          }}
           onPostpone={async (day) => {
             const task = open;
             try {
@@ -467,6 +488,9 @@ export function App() {
               feedbackWeek={feedbackWeek}
               feedbackGiven={feedback !== null}
               onFeedback={answerFeedback}
+              foyerId={foyer.id}
+              members={members}
+              onOpenModule={setModule}
             />
           )}
           {tab === 'planning' && (
@@ -488,7 +512,7 @@ export function App() {
             />
           )}
           {tab === 'guides' && <Guides tasks={tasks} onOpen={(t) => setOpenId(t.id)} onOpenGuide={() => setGuideOpen(true)} />}
-          {tab === 'foyer' && <Foyer foyer={foyer} taskCount={tasks.filter((t) => t.active).length} onOpenTasks={() => setManage(true)} onOpenProfile={() => setProfileOpen(true)} onOpenJournal={() => setJournal(true)} onOpenSettings={() => setSettingsOpen(true)} onOpenGuide={() => setGuideOpen(true)} />}
+          {tab === 'foyer' && <Foyer foyer={foyer} taskCount={tasks.filter((t) => t.active).length} onOpenTasks={() => setManage(true)} onOpenProfile={() => setProfileOpen(true)} onOpenJournal={() => setJournal(true)} onOpenModule={setModule} onOpenSettings={() => setSettingsOpen(true)} onOpenGuide={() => setGuideOpen(true)} />}
           <TabBar current={tab} onChange={setTab} />
         </>
       )}
