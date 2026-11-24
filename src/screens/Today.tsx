@@ -5,7 +5,7 @@ import { conseilDuJour } from '../data/conseils';
 import { weekImage, weekText } from '../lib/ardoise';
 import type { Member } from '../lib/api';
 import { Wordmark } from '../components/Brand';
-import { IconCheck, IconChevronRight, IconHelp, IconPlus } from '../components/Icons';
+import { IconCheck, IconChevronRight, IconHelp } from '../components/Icons';
 import { Topbar } from '../components/Pinned';
 import { Ring } from '../components/Ring';
 import { dueDate, formatMinutes, nextExtraTask, planWeeks, urgency, weekStart } from '../data/engine';
@@ -51,16 +51,35 @@ export function Today({ tasks, today, capacity, douceur, onHelp, onOpen, feedbac
   const doneThisWeek = tasks.filter((t) => t.active && t.lastDone >= monday && t.lastDone <= todayISO);
   const doneIds = new Set(doneThisWeek.map((t) => t.id));
   const [week] = planWeeks(tasks.filter((t) => !doneIds.has(t.id)), today, [capacity], { gentle: !!douceur });
-  const [extraIds, setExtraIds] = useState<string[]>([]);
+  // Une tâche de plus ou de moins cette semaine : gardé sur le téléphone, pour la semaine en cours.
+  const adjKey = `hestia.semaine.${monday}`;
+  const [adj, setAdjState] = useState<{ plus: string[]; moins: string[] }>(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem(adjKey) ?? 'null');
+      if (v && Array.isArray(v.plus) && Array.isArray(v.moins)) return v;
+    } catch {
+      // Rien de gardé
+    }
+    return { plus: [], moins: [] };
+  });
+  const setAdj = (v: { plus: string[]; moins: string[] }) => {
+    setAdjState(v);
+    try {
+      localStorage.setItem(adjKey, JSON.stringify(v));
+    } catch {
+      // Stockage indisponible : l'ajustement vaut pour cette visite
+    }
+  };
+  const removed = new Set(adj.moins);
   // Tâches faites pendant la semaine du bilan
   const weekDone = feedbackWeek
     ? tasks.filter((t) => t.lastDone >= feedbackWeek && t.lastDone <= toISODate(new Date(new Date(feedbackWeek + 'T12:00:00').getTime() + 6 * 86400000)))
     : [];
   const planned = new Set(week.tasks.map((t) => t.id));
-  const extra = extraIds
+  const extra = adj.plus
     .map((id) => tasks.find((t) => t.id === id))
-    .filter((t): t is Task => !!t && !doneIds.has(t.id) && !planned.has(t.id));
-  const todo = [...week.tasks, ...extra];
+    .filter((t): t is Task => !!t && !doneIds.has(t.id) && !planned.has(t.id) && !removed.has(t.id));
+  const todo = [...week.tasks.filter((t) => !removed.has(t.id)), ...extra];
   const list = [...todo, ...doneThisWeek];
   const listed = new Set(list.map((t) => t.id));
   const minutes = list.reduce((s, t) => s + t.minutes, 0);
@@ -70,9 +89,24 @@ export function Today({ tasks, today, capacity, douceur, onHelp, onOpen, feedbac
     .sort((a, b) => dueDate(a, today).getTime() - dueDate(b, today).getTime())
     .slice(0, 3);
 
+  /** Une de plus : on rend d'abord une tâche retirée, sinon la plus prioritaire qui reste. */
+  const nextPlus = adj.moins.length ? null : nextExtraTask(tasks, new Set([...listed, ...removed]), today);
+  const canPlus = adj.moins.length > 0 || !!nextPlus;
   const addOne = () => {
-    const next = nextExtraTask(tasks, listed, today);
-    if (next) setExtraIds((e) => [...e, next.id]);
+    if (adj.moins.length) setAdj({ ...adj, moins: adj.moins.slice(0, -1) });
+    else if (nextPlus) setAdj({ ...adj, plus: [...adj.plus, nextPlus.id] });
+  };
+  /** Une de moins : on retire d'abord une tâche ajoutée, sinon la moins prioritaire (une essentielle en dernier).
+   *  Elle revient simplement la semaine suivante. */
+  const removeOne = () => {
+    if (extra.length) {
+      const last = extra[extra.length - 1].id;
+      setAdj({ ...adj, plus: adj.plus.filter((id) => id !== last) });
+      return;
+    }
+    const kept = week.tasks.filter((t) => !removed.has(t.id)).reverse();
+    const pick = kept.find((t) => t.importance !== 1) ?? kept[0];
+    if (pick) setAdj({ ...adj, moins: [...adj.moins, pick.id] });
   };
 
   return (
@@ -138,10 +172,7 @@ export function Today({ tasks, today, capacity, douceur, onHelp, onOpen, feedbac
           })}
         </div>
 
-        <button className="btn-outline" onClick={addOne}>
-          <IconPlus size={18} />
-          Une tâche de plus
-        </button>
+        <PlusMoins count={todo.length} canMinus={todo.length > 0} canPlus={canPlus} onMinus={removeOne} onPlus={addOne} />
         {todo.length > 0 && (
           <button className="btn-link" onClick={() => setArdoise(true)} style={{ marginTop: -6 }}>Recopier sur l’ardoise</button>
         )}
@@ -250,5 +281,56 @@ function ArdoiseSheet({ monday, tasks, who, onClose }: { monday: Date; tasks: Ta
       {msg && <p className="meta" role="status" style={{ margin: 0, textAlign: 'center' }}>{msg}</p>}
       <button className="btn-link" onClick={onClose}>Fermer</button>
     </Sheet>
+  );
+}
+/** Bascule « une de moins / une de plus » : toucher − ou +, ou glisser la pastille vers la gauche ou la droite. */
+function PlusMoins({ count, canMinus, canPlus, onMinus, onPlus }: { count: number; canMinus: boolean; canPlus: boolean; onMinus: () => void; onPlus: () => void }) {
+  const [dx, setDx] = useState(0);
+  const [start, setStart] = useState<number | null>(null);
+  const [flash, setFlash] = useState<'plus' | 'moins' | null>(null);
+  const LIMIT = 70;
+  const fire = (dir: 'plus' | 'moins') => {
+    if (dir === 'plus' ? !canPlus : !canMinus) return;
+    (dir === 'plus' ? onPlus : onMinus)();
+    setFlash(dir);
+    navigator.vibrate?.(10);
+    setTimeout(() => setFlash(null), 450);
+  };
+  const end = () => {
+    if (dx > 44) fire('plus');
+    else if (dx < -44) fire('moins');
+    setDx(0);
+    setStart(null);
+  };
+  return (
+    <div className="plusmoins" role="group" aria-label="Ajuster la semaine">
+      <button className="plusmoins__side" aria-label="Une tâche de moins" disabled={!canMinus} onClick={() => fire('moins')}>
+        <span aria-hidden="true">−</span>
+        <small>une de moins</small>
+      </button>
+      <div
+        className="plusmoins__track"
+        onPointerDown={(e) => {
+          setStart(e.clientX);
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={(e) => start !== null && setDx(Math.max(-LIMIT, Math.min(LIMIT, e.clientX - start)))}
+        onPointerUp={end}
+        onPointerCancel={() => { setDx(0); setStart(null); }}
+      >
+        <span
+          className={`plusmoins__knob${flash ? ` plusmoins__knob--${flash}` : ''}`}
+          style={{ transform: `translateX(${dx}px)`, transition: start === null ? 'transform 0.25s cubic-bezier(.2,.9,.3,1.3)' : 'none' }}
+        >
+          <span className="num" style={{ fontSize: 18, fontWeight: 800 }}>{count}</span>
+          <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.8 }}>{count > 1 ? 'tâches' : 'tâche'}</span>
+        </span>
+        <span className="plusmoins__hint" aria-hidden="true"><span>‹‹</span><span>››</span></span>
+      </div>
+      <button className="plusmoins__side" aria-label="Une tâche de plus" disabled={!canPlus} onClick={() => fire('plus')}>
+        <span aria-hidden="true">+</span>
+        <small>une de plus</small>
+      </button>
+    </div>
   );
 }

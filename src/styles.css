@@ -697,3 +697,30 @@ html { background: var(--bg); }
   .today-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; padding-right: 20px; }
   .tableau { display: flex; flex-direction: column; gap: 14px; position: sticky; top: calc(env(safe-area-inset-top) + 96px); }
 }
+
+/* Bascule « une de moins / une de plus » sur Semaine */
+.plusmoins { display: grid; grid-template-columns: 88px minmax(0, 1fr) 88px; align-items: center; gap: 8px; }
+.plusmoins__side {
+  height: 60px; border-radius: 18px; border: 1px solid var(--card-border, var(--line)); background: var(--card); color: var(--ink);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; box-shadow: var(--shadow);
+}
+.plusmoins__side > span { font-size: 26px; font-weight: 700; line-height: 1; }
+.plusmoins__side > small { font-size: 11px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+.plusmoins__side:disabled { opacity: 0.35; }
+.plusmoins__side:active:not(:disabled) { transform: scale(0.95); }
+.plusmoins__track {
+  position: relative; height: 60px; border-radius: 999px; touch-action: pan-y; user-select: none; -webkit-user-select: none;
+  background: var(--divider); display: flex; align-items: center; justify-content: center; cursor: grab;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+.plusmoins__hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 16px; font-weight: 800; color: var(--ink-soft); opacity: 0.6; pointer-events: none; }
+.plusmoins__knob {
+  position: relative; z-index: 1; min-width: 96px; height: 48px; padding: 0 14px; border-radius: 999px;
+  background: var(--plate, #221A14); color: var(--plate-ink, #FFD27A); box-shadow: var(--plate-glow);
+  display: flex; align-items: baseline; justify-content: center; gap: 5px; line-height: 48px;
+}
+.plusmoins__knob--plus { animation: pm-plus 0.45s ease; }
+.plusmoins__knob--moins { animation: pm-moins 0.45s ease; }
+@keyframes pm-plus { 40% { box-shadow: 0 0 0 4px rgba(107, 227, 138, 0.45), 0 0 22px rgba(107, 227, 138, 0.6); } }
+@keyframes pm-moins { 40% { box-shadow: 0 0 0 4px rgba(255, 140, 90, 0.45), 0 0 22px rgba(255, 140, 90, 0.6); } }
+:root[data-theme='dark'] .plusmoins__knob { background: linear-gradient(135deg, #FFC861, #FF7A2E); color: #1A0F08; box-shadow: 0 0 18px rgba(255, 150, 60, 0.55); }
